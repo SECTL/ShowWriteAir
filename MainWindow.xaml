@@ -1,0 +1,1659 @@
+<Window x:Class="ShowWrite.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+        xmlns:sys="clr-namespace:System.Windows;assembly=PresentationFramework"
+        Title="ShowWrite视频展台" WindowState="Maximized" Background="Transparent" WindowStyle="None" AllowsTransparency="True"
+        xmlns:local="clr-namespace:ShowWrite"
+        xmlns:services="clr-namespace:ShowWrite.Services"
+        MouseWheel="Window_MouseWheel" Width="1558"
+        AllowDrop="True" DragEnter="Window_DragEnter" DragOver="Window_DragOver" Drop="Window_Drop">
+
+    <Window.Resources>
+        <!-- 使用一个 ResourceDictionary 包装所有资源 -->
+        <ResourceDictionary>
+            <!-- 导入深色主题资源字典（默认） -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="themes/DarkTheme.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- 画笔设置按钮样式 -->
+            <Style TargetType="Button" x:Key="PenSettingsButtonStyle">
+                <Setter Property="Width" Value="36"/>
+                <Setter Property="Height" Value="36"/>
+                <Setter Property="Margin" Value="1"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="BorderBrush" Value="#555"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                    CornerRadius="2">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 对钩图标几何数据 -->
+            <Geometry x:Key="CheckIconGeometry">M34.6 14.6L21 28.2l-5.6-5.6l-2.8 2.8l8.4 8.4l16.4-16.4z</Geometry>
+
+            <!-- 对钩图标样式 -->
+            <Style x:Key="CheckIconStyle" TargetType="Path">
+                <Setter Property="Data" Value="{StaticResource CheckIconGeometry}"/>
+                <Setter Property="Stretch" Value="Uniform"/>
+                <Setter Property="Width" Value="20"/>
+                <Setter Property="Height" Value="20"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="Fill" Value="#FFFFFF"/>
+                <Setter Property="Visibility" Value="Collapsed"/>
+            </Style>
+
+            <!-- 颜色按钮容器样式 -->
+            <Style x:Key="ColorButtonContainerStyle" TargetType="Grid">
+                <Setter Property="Width" Value="28"/>
+                <Setter Property="Height" Value="28"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+            </Style>
+
+            <!-- 颜色方块样式 -->
+            <Style x:Key="ColorRectangleStyle" TargetType="Rectangle">
+                <Setter Property="Width" Value="28"/>
+                <Setter Property="Height" Value="28"/>
+                <Setter Property="HorizontalAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="RadiusX" Value="3"/>
+                <Setter Property="RadiusY" Value="3"/>
+                <Setter Property="Stroke" Value="#666"/>
+                <Setter Property="StrokeThickness" Value="1"/>
+            </Style>
+
+            <!-- 分段工具按钮样式（中间）：全部方角 -->
+            <Style x:Key="SegmentedToolButtonStyle" TargetType="ToggleButton">
+                <Setter Property="Width" Value="64"/>
+                <Setter Property="Height" Value="64"/>
+                <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="0">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonHoverBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonPressedBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ToggleButtonCheckedBackground}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 分段按钮组 - 左侧（第一个按钮）：左侧圆角，右侧方角 -->
+            <Style x:Key="SegmentedToolButtonLeftStyle" TargetType="ToggleButton">
+                <Setter Property="Width" Value="64"/>
+                <Setter Property="Height" Value="64"/>
+                <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="4,0,0,4">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonHoverBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonPressedBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ToggleButtonCheckedBackground}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 分段按钮组 - 右侧（最后一个按钮）：左侧方角，右侧圆角 -->
+            <Style x:Key="SegmentedToolButtonRightStyle" TargetType="ToggleButton">
+                <Setter Property="Width" Value="64"/>
+                <Setter Property="Height" Value="64"/>
+                <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ToggleButton">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="0,4,4,0">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonHoverBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonPressedBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsChecked" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ToggleButtonCheckedBackground}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 分段按钮组（Button版） - 左侧圆角 -->
+            <Style x:Key="SegmentedButtonLeftStyle" TargetType="Button">
+                <Setter Property="Width" Value="64"/>
+                <Setter Property="Height" Value="64"/>
+                <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="4,0,0,4">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonHoverBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonPressedBackground}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 分段按钮组（Button版） - 中间方角 -->
+            <Style x:Key="SegmentedButtonMiddleStyle" TargetType="Button">
+                <Setter Property="Width" Value="64"/>
+                <Setter Property="Height" Value="64"/>
+                <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="0">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonHoverBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonPressedBackground}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 分段按钮组（Button版） - 右侧圆角 -->
+            <Style x:Key="SegmentedButtonRightStyle" TargetType="Button">
+                <Setter Property="Width" Value="64"/>
+                <Setter Property="Height" Value="64"/>
+                <Setter Property="Background" Value="{DynamicResource ButtonBackground}"/>
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="border" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="0" CornerRadius="0,4,4,0">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonHoverBackground}"/>
+                                </Trigger>
+                                <Trigger Property="IsPressed" Value="True">
+                                    <Setter TargetName="border" Property="Background" Value="{DynamicResource ButtonPressedBackground}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!-- 照片选择状态提示转换器 -->
+            <local:PhotoSelectedTipConverter x:Key="PhotoSelectedTipConverter"/>
+
+            <!-- 减法转换器 -->
+            <services:SubtractConverter x:Key="SubtractConverter"/>
+
+            <!-- 字符串到可见性转换器 -->
+            <services:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
+
+            <!-- 橡皮擦图像源 -->
+            <DrawingImage x:Key="EllipseEraserImageSource">
+                <DrawingImage.Drawing>
+                    <GeometryDrawing Brush="#80FFFFFF">
+                        <GeometryDrawing.Geometry>
+                            <EllipseGeometry Center="19,28" RadiusX="19" RadiusY="28"/>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                </DrawingImage.Drawing>
+            </DrawingImage>
+
+            <DrawingImage x:Key="RectangleEraserImageSource">
+                <DrawingImage.Drawing>
+                    <GeometryDrawing Brush="#80FFFFFF">
+                        <GeometryDrawing.Geometry>
+                            <RectangleGeometry Rect="0,0,38,56" RadiusX="4" RadiusY="4"/>
+                        </GeometryDrawing.Geometry>
+                    </GeometryDrawing>
+                </DrawingImage.Drawing>
+            </DrawingImage>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <!-- 底部工具栏已移至 VideoAreaContainer 内部，因此移除第二行 -->
+        </Grid.RowDefinitions>
+
+        <!-- 视频区域容器 - 包含可缩放的VideoArea和不可缩放的OverlayInkCanvas，以及悬浮工具栏 -->
+        <Grid x:Name="VideoAreaContainer" Grid.Row="0" ClipToBounds="True" Background="{DynamicResource WindowBackgroundBrush}">
+            <!-- 视频区域 - 使用正确的变换定义 -->
+            <Grid x:Name="VideoArea"
+                  IsManipulationEnabled="True"
+                  ManipulationStarting="VideoArea_ManipulationStarting"
+                  ManipulationDelta="VideoArea_ManipulationDelta"
+                  MouseDown="VideoArea_MouseDown"
+                  MouseMove="VideoArea_MouseMove"
+                  MouseUp="VideoArea_MouseUp"
+                  MouseLeftButtonDown="VideoArea_MouseLeftButtonDown">
+                <!-- 添加 RenderTransform 定义 -->
+                <Grid.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform x:Name="ZoomTransform" ScaleX="1" ScaleY="1" />
+                        <TranslateTransform x:Name="PanTransform" X="0" Y="0" />
+                    </TransformGroup>
+                </Grid.RenderTransform>
+                <Image x:Name="VideoImage" Stretch="Uniform" />
+                <InkCanvas x:Name="Ink" Background="Transparent"
+                           PreviewMouseLeftButtonDown="Ink_PreviewMouseLeftButtonDown"
+                           PreviewMouseMove="Ink_PreviewMouseMove"
+                           PreviewMouseLeftButtonUp="Ink_PreviewMouseLeftButtonUp" />
+            </Grid>
+
+            <!-- 画笔模式专用透明图层 - 不随任何缩放而缩放 -->
+            <InkCanvas x:Name="OverlayInkCanvas"
+                       Background="Transparent"
+                       Visibility="Collapsed"
+                       PreviewMouseLeftButtonDown="OverlayInk_PreviewMouseLeftButtonDown"
+                       PreviewMouseMove="OverlayInk_PreviewMouseMove"
+                       PreviewMouseLeftButtonUp="OverlayInk_PreviewMouseLeftButtonUp"
+                       PreviewStylusDown="OverlayInk_PreviewStylusDown"
+                       PreviewStylusMove="OverlayInk_PreviewStylusMove"
+                       PreviewStylusUp="OverlayInk_PreviewStylusUp" />
+
+            <!-- 橡皮擦覆盖层 - 位于 VideoArea 外部，大小不受画板缩放影响 -->
+            <Canvas x:Name="EraserOverlayCanvas" Background="Transparent" IsHitTestVisible="False" Visibility="Collapsed">
+                <Image x:Name="EraserFeedback" Width="38" Height="56" Stretch="Fill">
+                    <Image.RenderTransform>
+                        <TranslateTransform x:Name="EraserFeedbackTranslateTransform" X="0" Y="0"/>
+                    </Image.RenderTransform>
+                </Image>
+            </Canvas>
+
+            <!-- 底部工具栏 - 悬浮在视频区域上方 -->
+            <Grid x:Name="BottomToolbar" 
+                  VerticalAlignment="Bottom"
+                  Height="70"
+                  Margin="0,0,0,5"
+                  Background="{DynamicResource ToolbarBackgroundBrush}"
+                  Panel.ZIndex="10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 左侧功能区（更多/最小化/扫一扫） -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="10,0" VerticalAlignment="Center">
+                    <Button x:Name="MoreButton" Style="{DynamicResource MoreButtonStyle}" Margin="5,0,0,0"
+                            Click="MoreButton_Click">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox Width="30" Height="30">
+                                <Path Fill="{DynamicResource IconBrush}" Data="M4 6a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1m0 12a1 1 0 0 1 1-1h14a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1m1-7a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2z"/>
+                            </Viewbox>
+                            <TextBlock x:Name="MoreButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[More]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+
+                        
+                    </Button>
+                    <Button Style="{DynamicResource ButtonStyle}" Click="Minimize_Click" Margin="5,0,0,0">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox Width="29" Height="30">
+                                <Path Fill="{DynamicResource IconBrush}" Data="M18 3.25H6A2.75 2.75 0 0 0 3.25 6v6a.75.75 0 0 0 1.5 0V6A1.25 1.25 0 0 1 6 4.75h12A1.25 1.25 0 0 1 19.25 6v12A1.25 1.25 0 0 1 18 19.25h-6a.75.75 0 0 0 0 1.5h6A2.75 2.75 0 0 0 20.75 18V6A2.75 2.75 0 0 0 18 3.25 M11.21 13.19a.8.8 0 0 0 .29.06h4a.75.75 0 0 0 0-1.5h-2.19l3.22-3.22a.75.75 0 0 0-1.06-1.06l-3.22 3.22V8.5a.75.75 0 0 0-1.5 0v4a.8.8 0 0 0 .06.29a.7.7 0 0 0 .4.4 M8 14.25H5A1.76 1.76 0 0 0 3.25 16v3A1.76 1.76 0 0 0 5 20.75h3A1.76 1.76 0 0 0 9.75 19v-3A1.76 1.76 0 0 0 8 14.25 M8.25 19a.25.25 0 0 1-.25.25H5a.25.25 0 0 1-.25-.25v-3a.25.25 0 0 1 .25-.25h3a.25.25 0 0 1 .25.25Z"/>
+                            </Viewbox>
+                            <TextBlock x:Name="MinimizeButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Minimize]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{DynamicResource ButtonStyle}" Click="ScanQRCode_Click" Margin="5,0">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox Width="30" Height="30">
+                                <Path Fill="{DynamicResource IconBrush}" Data="M9 3H3v6h2V5h4zM3 21v-6h2v4h4v2zM15 3v2h4v4h2V3zm4 12h2v6h-6v-2h4zM7 7h4v4H7zm0 6h4v4H7zm10-6h-4v4h4zm-4 6h4v4h-4z" RenderTransformOrigin="0.586,0.577"/>
+                            </Viewbox>
+                            <TextBlock x:Name="ScanQRButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ScanQR]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- 中间主菜单 - 居中显示，整体容器背景 -->
+                <Border Grid.Column="1"
+                        Background="{DynamicResource ButtonBackground}"
+                        CornerRadius="8"
+                        Padding="4,2"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <!-- 移动 / 画笔 / 橡皮擦 / 油漆桶 - 分段按钮组 -->
+                    <Border BorderBrush="Transparent" BorderThickness="0" CornerRadius="0" Margin="0">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton x:Name="MoveBtn" Click="MoveBtn_Click" IsChecked="True" Style="{StaticResource SegmentedToolButtonLeftStyle}">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="30" Height="30">
+                                        <Path x:Name="MoveIcon">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Fill" Value="{DynamicResource IconBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                                            <Setter Property="Fill" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                            <Path.Data>M622 637H368l142 296q12 24 3 48.5t-33.5 36t-49.5 2.5t-37-32L257 703L65 895q-27 0-46-19T0 831V24Q0 9 17.5 3T58 3t39 21l516 516q13 13 21.5 36t6 42t-18.5 19z</Path.Data>
+                                        </Path>
+                                    </Viewbox>
+                                    <TextBlock x:Name="MoveButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Move]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            <ToggleButton x:Name="PenBtn" Click="PenBtn_Click" Style="{StaticResource SegmentedToolButtonStyle}">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="30" Height="30">
+                                        <Path x:Name="PenIcon">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Fill" Value="{DynamicResource IconBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                                            <Setter Property="Fill" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                            <Path.Data>M4.2 20.975q-.525.125-.913-.262t-.262-.913l.875-4.25l4.55 4.55zm5.875-2.1l-4.95-4.95L15.45 3.6q.575-.575 1.425-.575T18.3 3.6l2.1 2.1q.575.575.575 1.425T20.4 8.55z</Path.Data>
+                                        </Path>
+                                    </Viewbox>
+                                    <TextBlock x:Name="PenButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Pen]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            <ToggleButton x:Name="EraserBtn" Click="EraserBtn_Click" Style="{StaticResource SegmentedToolButtonStyle}">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="30" Height="30">
+                                        <Path x:Name="EraserIcon">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Fill" Value="{DynamicResource IconBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                                            <Setter Property="Fill" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                            <Path.Data>M3.121 17.85a3 3 0 0 1 0-4.243l7.071-7.072l8.486 8.486l-3.243 3.242H20a1 1 0 1 1 0 2H6.778a3 3 0 0 1-2.121-.878L3.12 17.849zm16.97-4.243l1.415-1.415a3 3 0 0 0 0-4.242l-4.243-4.243a3 3 0 0 0-4.242 0l-1.414 1.414z</Path.Data>
+                                        </Path>
+                                    </Viewbox>
+                                    <TextBlock x:Name="EraserButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Eraser]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </ToggleButton>
+                            <ToggleButton x:Name="PaintBucketBtn" Click="PaintBucketBtn_Click" Style="{StaticResource SegmentedToolButtonRightStyle}">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="30" Height="30">
+                                        <Path x:Name="PaintBucketIcon">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Fill" Value="{DynamicResource IconBrush}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsChecked, RelativeSource={RelativeSource AncestorType=ToggleButton}}" Value="True">
+                                                            <Setter Property="Fill" Value="White"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                            <Path.Data>M19 11.5s-2 2.17-2 3.5a2 2 0 0 0 4 0c0-1.33-2-3.5-2-3.5M5.21 10L10 5.21L16.79 12L12 16.79zm-1.5-3.5l9-9l3.5 3.5l-9 9zm9 9l1.5-1.5l6.5 6.5c.5.5.5 1.5 0 2s-1.5.5-2 0z</Path.Data>
+                                        </Path>
+                                    </Viewbox>
+                                    <TextBlock x:Name="PaintBucketButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[PaintBucket]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </ToggleButton>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 分组分隔线 -->
+                    <Rectangle Width="1" Margin="3,16" Fill="{DynamicResource ToolbarDividerBrush}"/>
+
+                    <!-- 撤回 / 重做 / 清屏 - 分段按钮组 -->
+                    <Border BorderBrush="Transparent" BorderThickness="0" CornerRadius="0" Margin="0">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="UndoBtn" Style="{DynamicResource SegmentedButtonLeftStyle}" Click="UndoInk_Click">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="30" Height="30">
+                                        <Path Fill="{DynamicResource IconBrush}" Data="M16 3C12 3 8.4 4.8 6 7.7V4H4v8h8v-2H6.8c2-3 5.3-5 9.2-5c6.1 0 11 4.9 11 11s-4.9 11-11 11S5 22.1 5 16H3c0 7.2 5.8 13 13 13s13-5.8 13-13S23.2 3 16 3"/>
+                                    </Viewbox>
+                                    <TextBlock x:Name="UndoButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Undo]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="RedoBtn" Style="{DynamicResource SegmentedButtonMiddleStyle}" Click="RedoInk_Click">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="30" Height="30">
+                                        <Path Fill="{DynamicResource IconBrush}" Data="M16 3C8.832 3 3 8.832 3 16s5.832 13 13 13s13-5.832 13-13h-2c0 6.086-4.914 11-11 11S5 22.086 5 16S9.914 5 16 5c3.875 0 7.262 1.984 9.219 5H20v2h8V4h-2v3.719C23.617 4.844 20.02 3 16 3"/>
+                                    </Viewbox>
+                                    <TextBlock x:Name="RedoButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Redo]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Button>
+                            <Button x:Name="ClearBtn" Style="{DynamicResource SegmentedButtonRightStyle}" Click="ClearInk_Click">
+                                <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="30" Height="30">
+                                        <Path Fill="{DynamicResource IconBrush}" Data="M16.5 4.478v.227a49 49 0 0 1 3.878.512a.75.75 0 1 1-.256 1.478l-.209-.035l-1.005 13.07a3 3 0 0 1-2.991 2.77H8.084a3 3 0 0 1-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 0 1-.256-1.478A49 49 0 0 1 7.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a53 53 0 0 1 3.369 0c1.603.051 2.815 1.387 2.815 2.951m-6.136-1.452a51 51 0 0 1 3.273 0C14.39 3.05 15 3.684 15 4.478v.113a50 50 0 0 0-6 0v-.113c0-.794.609-1.428 1.364-1.452m-.355 5.945a.75.75 0 1 0-1.5.058l.347 9a.75.75 0 1 0 1.499-.058zm5.48.058a.75.75 0 1 0-1.498-.058l-.347 9a.75.75 0 0 0 1.5.058z"/>
+                                    </Viewbox>
+                                    <TextBlock x:Name="ClearButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Clear]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 分组分隔线 -->
+                    <Rectangle Width="1" Margin="3,16" Fill="{DynamicResource ToolbarDividerBrush}"/>
+
+                    <!-- 拍照 / 扫描 -->
+                    <Button x:Name="CaptureBtn" Style="{DynamicResource ButtonStyle}" Click="Capture_Click" Margin="0">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox Width="30" Height="30">
+                                <Path Fill="{DynamicResource IconBrush}" Data="M19 6.5h-1.28l-.32-1a3 3 0 0 0-2.84-2H9.44A3 3 0 0 0 6.6 5.55l-.32 1H5a3 3 0 0 0-3 3v8a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-8a3 3 0 0 0-3-3.05m1 11a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1h2a1 1 0 0 0 1-.68l.54-1.64a1 1 0 0 1 .95-.68h5.12a1 1 0 0 1 .95.68l.54 1.64a1 1 0 0 0 .9.68h2a1 1 0 0 1 1 1Zm-8-9a4 4 0 1 0 4 4a4 4 0 0 0-4-4m0 6a2 2 0 1 1 2-2a2 2 0 0 1-2 2"/>
+                            </Viewbox>
+                            <TextBlock x:Name="CaptureButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Capture]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ScanBtn" Style="{DynamicResource ButtonStyle}" Click="ScanDocument_Click" Margin="0">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox Width="30" Height="30">
+                                <Path Fill="{DynamicResource IconBrush}" Data="M13 9h5l-5-5zM4 22v-5h16v5zm-3-7v-2h22v2zm3-4V2h10l6 6v3z"/>
+                            </Viewbox>
+                            <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Scan]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+                </Border>
+
+                <!-- 右侧功能区 -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="10,0">
+                    <!-- 照片按钮 - 展开/收起照片栏 -->
+                    <Button x:Name="TogglePhotoBtn" 
+                            Style="{DynamicResource ButtonStyle}" 
+                            Click="TogglePhotoPanel_Click"
+                            Margin="0,0,5,0">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Grid Width="30" Height="30">
+                                <Viewbox x:Name="PhotoIconViewbox" Stretch="Uniform">
+                                    <Path Fill="{DynamicResource IconBrush}" Data="M19 4H5a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3M5 18a1 1 0 0 1-1-1v-2.42l3.3-3.29a1 1 0 0 1 1.4 0L15.41 18Zm15-1a1 1 0 0 1-1 1h-.77l-3.81-3.83l.88-.88a1 1 0 0 1 1.4 0l3.3 3.29Zm0-3.24l-1.88-1.87a3.06 3.06 0 0 0-4.24 0l-.88.88l-2.88-2.88a3.06 3.06 0 0 0-4.24 0L4 11.76V7a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1Z"/>
+                                </Viewbox>
+                                <Viewbox x:Name="CloseIconViewbox" Stretch="Uniform" Visibility="Collapsed">
+                                    <Path Fill="{DynamicResource IconBrush}" Data="M10 12.5a.47.47 0 0 1-.35-.15l-8-8c-.2-.2-.2-.51 0-.71s.51-.2.71 0l7.99 8.01c.2.2.2.51 0 .71c-.1.1-.23.15-.35.15Z M2 12.5a.47.47 0 0 1-.35-.15c-.2-.2-.2-.51 0-.71l8-7.99c.2-.2.51-.2.71 0s.2.51 0 .71l-8.01 7.99c-.1.1-.23.15-.35.15"/>
+                                </Viewbox>
+                            </Grid>
+                            <TextBlock x:Name="TogglePhotoButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Photos]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+                    </Button>
+
+                    <!-- 连接设备按钮 -->
+                    <Button x:Name="ConnectDeviceBtn" 
+                            Style="{DynamicResource ButtonStyle}" 
+                            Click="ConnectDeviceBtn_Click">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Viewbox Width="30" Height="30">
+                                <Path Fill="{DynamicResource IconBrush}" Data="M640 384v64H448a128 128 0 0 0-128 128v128a128 128 0 0 0 128 128h320a128 128 0 0 0 128-128V576a128 128 0 0 0-64-110.848V394.88c74.56 26.368 128 97.472 128 181.056v128a192 192 0 0 1-192 192H448a192 192 0 0 1-192-192V576a192 192 0 0 1 192-192zM384 640v-64h192a128 128 0 0 0 128-128V320a128 128 0 0 0-128-128H256a128 128 0 0 0-128 128v128a128 128 0 0 0 64 110.848v70.272A192.06 192.06 0 0 1 64 448V320a192 192 0 0 1 192-192h320a192 192 0 0 1 192 192v128a192 192 0 0 1-192 192z"/>
+                            </Viewbox>
+                            <TextBlock x:Name="ConnectDeviceButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ConnectDevice]}" FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextBrush}"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Grid>
+
+        <!-- 照片折叠栏 - 覆盖在视频画面上方 -->
+        <Border x:Name="PhotoPanelBorder"
+                Grid.Row="0"
+                Width="340"
+                HorizontalAlignment="Right"
+                Margin="0,0,0,75"
+                Background="{DynamicResource PopupBackground}"
+                BorderBrush="{DynamicResource PopupBorder}"
+                BorderThickness="1,0,0,0"
+                Visibility="Collapsed"
+                Panel.ZIndex="20">
+            <Grid>
+                <!-- 内容保持不变（与原始文件相同） -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 标题栏 -->
+                <Border Grid.Row="0" Background="{DynamicResource PopupBackground}" Padding="10,8" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="0,0,0,1">
+                    <TextBlock x:Name="PhotoRecordsTitleText" 
+                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[PhotoRecords]}" 
+                               Foreground="{DynamicResource TextBrush}" 
+                               FontSize="16" 
+                               FontWeight="Bold"
+                               HorizontalAlignment="Left"/>
+                </Border>
+
+                <!-- 照片列表 -->
+                <ListBox x:Name="PhotoList"
+                         Grid.Row="1"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         Tag="Collapsed">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <ContentPresenter/>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="4,4">
+                                <!-- 缩略图 - 铺满整个区域，圆角裁剪 -->
+                                <Border Height="180"
+                                        CornerRadius="8"
+                                        ClipToBounds="True"
+                                        MouseLeftButtonDown="PhotoImage_MouseLeftButtonDown">
+                                    <Border.Background>
+                                        <ImageBrush ImageSource="{Binding Image}"
+                                                    Stretch="UniformToFill"
+                                                    RenderOptions.BitmapScalingMode="HighQuality"/>
+                                    </Border.Background>
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Effect">
+                                                <Setter.Value>
+                                                    <DropShadowEffect BlurRadius="0" ShadowDepth="0" Opacity="0" Color="Black"/>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True"/>
+                                                        <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBox}, Path=Tag}" Value="Collapsed"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Effect">
+                                                        <Setter.Value>
+                                                            <DropShadowEffect BlurRadius="15" ShadowDepth="5" Opacity="0.6" Color="Black"/>
+                                                        </Setter.Value>
+                                                    </Setter>
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                </Border>
+                                <!-- 选中状态遮罩（盖满整个缩略图，圆角匹配） -->
+                                <Border Background="#80000000"
+                                        CornerRadius="8"
+                                        IsHitTestVisible="False">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True"/>
+                                                        <Condition Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBox}, Path=Tag}" Value="Collapsed"/>
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Text="再次点击&#x0a;返回实时"
+                                               Foreground="White"
+                                               FontSize="14"
+                                               FontWeight="Bold"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Center"/>
+                                </Border>
+                                <!-- 左上角编号 + 来源图标（序号右边） -->
+                                <StackPanel Orientation="Horizontal"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Top"
+                                            Margin="8">
+                                    <!-- 编号（圆形背景） -->
+                                    <Border Width="28" Height="28"
+                                            CornerRadius="14"
+                                            Background="#CC000000"
+                                            IsHitTestVisible="False">
+                                        <TextBlock Text="{Binding Index}"
+                                                   Foreground="White"
+                                                   FontSize="14"
+                                                   FontWeight="Bold"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"/>
+                                    </Border>
+                                    <!-- 来源图标：本地=电脑图标，来自手机=手机图标 -->
+                                    <Border Width="20" Height="20"
+                                            Margin="4,4,0,0"
+                                            CornerRadius="10"
+                                            Background="#CC000000"
+                                            IsHitTestVisible="False">
+                                        <Viewbox Width="12" Height="12">
+                                            <Path Fill="White">
+                                                <Path.Style>
+                                                    <Style TargetType="Path">
+                                                        <Setter Property="Data" Value="{x:Null}"/>
+                                                        <Style.Triggers>
+                                                            <!-- 来自手机客户端：手机图标 -->
+                                                            <DataTrigger Binding="{Binding Source}" Value="{x:Static local:PhotoSource.FromClient}">
+                                                                <Setter Property="Data" Value="M4 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H4zm0 1h6a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1zm2.5 12a.5.5 0 1 1 0 1 .5.5 0 0 1 0-1z"/>
+                                                            </DataTrigger>
+                                                            <!-- 本地照片：电脑/显示器图标 -->
+                                                            <DataTrigger Binding="{Binding Source}" Value="{x:Static local:PhotoSource.Local}">
+                                                                <Setter Property="Data" Value="M1 1a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V1zm1 0v9h12V1H2zm3 11h6v1H5v-1zm-1 1h8a.5.5 0 0 1 0 1H4a.5.5 0 0 1 0-1z"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Path.Style>
+                                            </Path>
+                                        </Viewbox>
+                                    </Border>
+                                </StackPanel>
+                                <!-- 右上角复选框（保存模式时显示） -->
+                                <CheckBox x:Name="PhotoCheckBox"
+                                          IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                          HorizontalAlignment="Right"
+                                          VerticalAlignment="Top"
+                                          Margin="8"
+                                          Width="24" Height="24"
+                                          Visibility="{Binding RelativeSource={RelativeSource AncestorType=ListBox}, Path=Tag, Converter={StaticResource StringToVisibilityConverter}}"/>
+                                <!-- 左下角删除/确认按钮组 -->
+                                <Grid HorizontalAlignment="Left"
+                                      VerticalAlignment="Bottom"
+                                      Margin="8,0,0,8">
+                                        <!-- 删除按钮（默认显示） -->
+                                        <Button x:Name="DeletePhotoButton"
+                                                Width="28" Height="28"
+                                                Click="DeletePhoto_Click"
+                                                Tag="{Binding}"
+                                                Cursor="Hand"
+                                                ToolTip="删除照片">
+                                            <Button.Template>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="#80808080" CornerRadius="4" Width="28" Height="28">
+                                                        <Viewbox Width="16" Height="16">
+                                                            <Path Fill="White" Data="M5.75 3V1.5h4.5V3zm-1.5 0V1a1 1 0 0 1 1-1h5.5a1 1 0 0 1 1 1v2h2.5a.75.75 0 0 1 0 1.5h-.365l-.743 9.653A2 2 0 0 1 11.148 16H4.852a2 2 0 0 1-1.994-1.847L2.115 4.5H1.75a.75.75 0 0 1 0-1.5zm-.63 1.5h8.76l-.734 9.538a.5.5 0 0 1-.498.462H4.852a.5.5 0 0 1-.498-.462z"/>
+                                                        </Viewbox>
+                                                    </Border>
+                                                </ControlTemplate>
+                                            </Button.Template>
+                                        </Button>
+                                        <!-- 确认/取消按钮组（点击删除后显示） -->
+                                        <StackPanel x:Name="DeleteConfirmPanel"
+                                                    Orientation="Horizontal"
+                                                    Visibility="Collapsed">
+                                            <Button x:Name="ConfirmDeleteBtn"
+                                                    Width="50" Height="28"
+                                                    Click="ConfirmDelete_Click"
+                                                    Tag="{Binding}"
+                                                    Cursor="Hand"
+                                                    ToolTip="确认删除">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="#CCFF4444" CornerRadius="4,0,0,4">
+                                                            <TextBlock Text="确认"
+                                                                       Foreground="White"
+                                                                       FontSize="12"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                            <Button x:Name="CancelDeleteBtn"
+                                                    Width="50" Height="28"
+                                                    Click="CancelDelete_Click"
+                                                    Cursor="Hand"
+                                                    ToolTip="取消删除">
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border Background="#CC808080" CornerRadius="0,4,4,0">
+                                                            <TextBlock Text="取消"
+                                                                       Foreground="White"
+                                                                       FontSize="12"
+                                                                       HorizontalAlignment="Center"
+                                                                       VerticalAlignment="Center"/>
+                                                        </Border>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- 底部按钮栏 -->
+                <Border Grid.Row="2" Background="{DynamicResource PopupBackground}" Padding="10,8" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="0,1,0,0">
+                    <Grid>
+                        <!-- 默认按钮组 -->
+                        <StackPanel x:Name="DefaultButtonsPanel" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <Button x:Name="SavePhotoBtn" 
+                                    Style="{DynamicResource MenuButtonStyle}" 
+                                    Width="80" Height="40" 
+                                    Click="SavePhoto_Click">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="18" Height="18" Margin="0,0,5,0">
+                                        <Path Fill="{DynamicResource IconBrush}" Data="M2 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9.5a1 1 0 0 0-1 1v4.5h2a.5.5 0 0 1 .354.854l-2.5 2.5a.5.5 0 0 1-.708 0l-2.5-2.5A.5.5 0 0 1 5.5 6.5h2V2a2 2 0 0 1 2-2H14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h2.5a.5.5 0 0 1 0 1z"/>
+                                    </Viewbox>
+                                    <TextBlock x:Name="SavePhotoButtonText" 
+                                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[SaveImage]}" 
+                                               FontSize="12" 
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button x:Name="ImportPhotoBtn" 
+                                    Style="{DynamicResource MenuButtonStyle}" 
+                                    Width="80" Height="40" 
+                                    Click="ImportPhoto_Click"
+                                    Margin="10,0,0,0">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="18" Height="18" Margin="0,0,5,0">
+                                        <Path Fill="{DynamicResource IconBrush}" Data="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                                    </Viewbox>
+                                    <TextBlock x:Name="ImportPhotoButtonText" 
+                                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Import]}" 
+                                               FontSize="12" 
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Button>
+
+                            <Button x:Name="ExportStrokesBtn" 
+                                    Style="{DynamicResource MenuButtonStyle}" 
+                                    Width="80" Height="40" 
+                                    Click="ExportStrokes_Click"
+                                    Margin="10,0,0,0">
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Viewbox Width="18" Height="18" Margin="0,0,5,0">
+                                        <Path Fill="{DynamicResource IconBrush}" Data="M3 3h18v2H3V3zm9 4l-5 5h3v9h4v-9h3l-5-5z"/>
+                                    </Viewbox>
+                                    <TextBlock x:Name="ExportStrokesButtonText" 
+                                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ExportStrokes]}" 
+                                               FontSize="12" 
+                                               Foreground="{DynamicResource TextBrush}"/>
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- 选择模式按钮组 -->
+                        <StackPanel x:Name="SelectModeButtonsPanel" Orientation="Horizontal" HorizontalAlignment="Center" Visibility="Collapsed">
+                            <Button x:Name="InvertSelectBtn" 
+                                    Style="{DynamicResource MenuButtonStyle}"
+                                    Width="80" Height="40"
+                                    Click="InvertSelectionButton_Click">
+                                <TextBlock x:Name="InvertSelectButtonText" 
+                                           Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[InvertSelect]}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </Button>
+                            <Button x:Name="SaveSelectedBtn" 
+                                    Style="{DynamicResource MenuButtonStyle}"
+                                    Width="80" Height="40"
+                                    Click="SavePhoto_Click"
+                                    Margin="10,0,0,0">
+                                <TextBlock x:Name="SaveSelectedButtonText" 
+                                           Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[OK]}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </Button>
+                            <Button x:Name="CancelSelectBtn" 
+                                    Style="{DynamicResource MenuButtonStyle}"
+                                    Width="80" Height="40"
+                                    Click="CancelSelect_Click"
+                                    Margin="10,0,0,0">
+                                <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Cancel]}"
+                                           FontSize="12"
+                                           Foreground="{DynamicResource TextBrush}"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- 连接设备悬浮窗 -->
+        <Popup x:Name="ConnectDevicePopup" PlacementTarget="{Binding ElementName=ConnectDeviceBtn}" Placement="Top" StaysOpen="True"
+               AllowsTransparency="True" PopupAnimation="Fade" Opened="ConnectDevicePopup_Opened" Closed="ConnectDevicePopup_Closed">
+            <!-- 内容保持不变（省略，与原始文件相同） -->
+            <Border Background="{DynamicResource PopupBackground}" CornerRadius="6" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
+                    Padding="15">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <!-- 右侧：主内容（原 Width=300 减去左右 Padding 各 15，内容区固定 270） -->
+                    <StackPanel Grid.Column="1" Width="270">
+                    <!-- 标题栏：左侧已连接设备数，中间标题 -->
+                    <Grid Margin="0,0,0,15">
+                        <!-- 左侧已连接设备数徽章（点击展开/收起左侧设备列表） -->
+                        <Border x:Name="ConnectedDeviceCountBadge" 
+                                HorizontalAlignment="Left" VerticalAlignment="Center"
+                                Background="#2196F3" CornerRadius="10" 
+                                Padding="8,2,8,2" Cursor="Hand"
+                                MouseLeftButtonDown="ConnectedDeviceCountBadge_MouseLeftButtonDown"
+                                ToolTip="点击查看已连接设备">
+                            <StackPanel Orientation="Horizontal">
+                                <Viewbox Width="12" Height="12">
+                                    <Path Fill="White" Data="M640 384v64H448a128 128 0 0 0-128 128v128a128 128 0 0 0 128 128h320a128 128 0 0 0 128-128V576a128 128 0 0 0-64-110.848V394.88c74.56 26.368 128 97.472 128 181.056v128a192 192 0 0 1-192 192H448a192 192 0 0 1-192-192V576a192 192 0 0 1 192-192zM384 640v-64h192a128 128 0 0 0 128-128V320a128 128 0 0 0-128-128H256a128 128 0 0 0-128 128v128a128 128 0 0 0 64 110.848v70.272A192.06 192.06 0 0 1 64 448V320a192 192 0 0 1 192-192h320a192 192 0 0 1 192 192v128a192 192 0 0 1-192 192z"/>
+                                </Viewbox>
+                                <TextBlock x:Name="ConnectedDeviceCountText" Text="0" Foreground="White" FontSize="12" FontWeight="Bold"
+                                           Margin="4,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock x:Name="ConnectDeviceTitleText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ConnectDevice]}" Foreground="{DynamicResource TextBrush}" FontSize="16" FontWeight="Bold" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Grid>
+
+                    <!-- 主视图 -->
+                    <StackPanel x:Name="ConnectDeviceMainView">
+                        <TextBlock x:Name="ConnectionStatusText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[WaitingForConnection]}" Foreground="{DynamicResource TextBrush}" FontSize="14"
+                                   Margin="0,0,0,10" HorizontalAlignment="Center"/>
+                
+
+                        <Border Width="200" Height="200" Background="{DynamicResource PopupBackground}" Margin="0,0,0,15" HorizontalAlignment="Center">
+                            <Image x:Name="QrCodeImage" Width="180" Height="180" Stretch="Uniform"/>
+                        </Border>
+
+                        <TextBlock x:Name="IpAddressText" Text="" Foreground="{DynamicResource TextBrush}" FontSize="12"
+                                   Margin="0,0,0,10" HorizontalAlignment="Center"/>
+
+                        <!-- 网络偏好：标签+选择框横向排列 -->
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,5">
+                            <TextBlock x:Name="NetworkPreferenceLabel" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[NetworkPreference]}" Foreground="{DynamicResource TextBrush}" FontSize="12"
+                                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox x:Name="NetworkPreferenceComboBox" Width="100" Height="28" SelectionChanged="NetworkPreferenceComboBox_SelectionChanged">
+                                <ComboBoxItem Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[LAN]}"/>
+                                <ComboBoxItem Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Hotspot]}"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <!-- 热点信息显示（仅热点模式可见） -->
+                        <StackPanel x:Name="HotspotInfoPanel" Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,0,0,10">
+                            <TextBlock x:Name="HotspotSsidDisplay" Text="" Foreground="{DynamicResource TextBrush}" FontSize="11" HorizontalAlignment="Center" Margin="0,0,0,2"/>
+                            <TextBlock x:Name="HotspotPasswordDisplay" Text="" Foreground="{DynamicResource TextBrush}" FontSize="11" HorizontalAlignment="Center"/>
+                        </StackPanel>
+
+                        <Button x:Name="ConnectDeviceSettingsBtn" Click="ConnectDeviceSettingsBtn_Click"
+                                HorizontalAlignment="Right" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="Transparent" Padding="4">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Viewbox Width="14" Height="14">
+                                                <Path Fill="{DynamicResource TextBrush}" Data="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                                            </Viewbox>
+                                            <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Settings]}"
+                                                       Foreground="{DynamicResource TextBrush}" FontSize="11" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+
+                    <!-- 设置视图 -->
+                    <StackPanel x:Name="ConnectDeviceSettingsView" Visibility="Collapsed">
+                        <!-- 端口号设置：标题+内容横向排列 -->
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[PortNumber]}"
+                                       Foreground="{DynamicResource TextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBox x:Name="PortNumberText" Text="8888" Width="100" Height="30" FontSize="12"
+                                         TextAlignment="Center" VerticalContentAlignment="Center"/>
+                                <Button Style="{DynamicResource ButtonStyle}" Width="60" Height="30" Margin="5,0,0,0" Click="RefreshPortBtn_Click">
+                                    <TextBlock x:Name="RefreshButtonText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Refresh]}" FontSize="10" HorizontalAlignment="Center" Foreground="{DynamicResource TextBrush}"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- 网卡设置：标题+下拉框横向排列 -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[NetworkAdapter]}"
+                                       Foreground="{DynamicResource TextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <ComboBox x:Name="NetworkAdapterComboBox" Grid.Column="1" Height="30"
+                                      HorizontalAlignment="Stretch" FontSize="11" VerticalAlignment="Center"
+                                      SelectionChanged="NetworkAdapterComboBox_SelectionChanged"/>
+                        </Grid>
+
+                        <!-- 显示虚拟网卡复选框 + 提示图标：三者独立排列，避免 CheckBox 模板内部间距导致错位 -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,15">
+                            <CheckBox x:Name="ShowVirtualAdaptersCheckBox"
+                                      Checked="ShowVirtualAdaptersCheckBox_Changed" Unchecked="ShowVirtualAdaptersCheckBox_Changed"
+                                      VerticalAlignment="Center" Padding="0" Margin="0" MinWidth="0"/>
+                            <TextBlock x:Name="ShowVirtualAdaptersLabel"
+                                       Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ShowVirtualAdapters]}"
+                                       Foreground="{DynamicResource TextBrush}" FontSize="11"
+                                       VerticalAlignment="Center" Margin="2,0,0,0" Cursor="Hand"
+                                       MouseLeftButtonDown="ShowVirtualAdaptersLabel_MouseLeftButtonDown"/>
+                            <!-- 提示图标：单击显示提示悬浮框 -->
+                            <Border x:Name="VirtualAdapterTipIcon" Width="12" Height="12" Margin="4,0,0,0"
+                                    Background="Transparent" Cursor="Hand" VerticalAlignment="Center"
+                                    MouseLeftButtonDown="VirtualAdapterTipIcon_MouseLeftButtonDown">
+                                <Viewbox Width="12" Height="12">
+                                    <Path Fill="{DynamicResource TextBrush}" Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1zm0-8c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+                                </Viewbox>
+                            </Border>
+                        </StackPanel>
+
+                        <!-- 热点设置：SSID 模式选择 + 密码（横向排列） -->
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[HotspotSSID]}"
+                                       Foreground="{DynamicResource TextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <ComboBox x:Name="HotspotSsidModeComboBox" Width="90" Height="30" FontSize="11"
+                                          SelectionChanged="HotspotSsidModeComboBox_SelectionChanged">
+                                    <ComboBoxItem Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[DeviceName]}"/>
+                                    <ComboBoxItem Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[DefaultName]}"/>
+                                    <ComboBoxItem Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[CustomName]}"/>
+                                </ComboBox>
+                                <TextBox x:Name="HotspotCustomSsidText" Width="100" Height="30" FontSize="11"
+                                         VerticalContentAlignment="Center" Margin="5,0,0,0" Visibility="Collapsed"
+                                         TextChanged="HotspotCustomSsidText_TextChanged"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[HotspotPassword]}"
+                                       Foreground="{DynamicResource TextBrush}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <TextBox x:Name="HotspotPasswordText" Grid.Column="1" Width="120" Height="30" FontSize="11"
+                                     VerticalContentAlignment="Center" HorizontalAlignment="Left"
+                                     TextChanged="HotspotPasswordText_TextChanged"/>
+                        </Grid>
+
+                        <!-- 返回按钮 -->
+                        <Button x:Name="ConnectDeviceBackBtn" Click="ConnectDeviceBackBtn_Click"
+                                HorizontalAlignment="Center" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="Transparent" Padding="4">
+                                        <Viewbox Width="16" Height="16">
+                                            <Path Fill="{DynamicResource TextBrush}" Data="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+                                        </Viewbox>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </StackPanel>
+                    </StackPanel>
+
+                    <!-- 左侧：已连接设备列表（点击已连接设备数徽章向左展开/收起） -->
+                    <Border x:Name="ConnectedDeviceListPanel" Grid.Column="0" Visibility="Collapsed"
+                            VerticalAlignment="Stretch" Margin="0,0,15,0"
+                            BorderBrush="{DynamicResource PopupBorder}" BorderThickness="0,0,1,0">
+                        <StackPanel Width="200">
+                            <!-- 标题：居中于展开窗口 -->
+                            <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ConnectedDevices]}"
+                                       Foreground="{DynamicResource TextBrush}" FontSize="14" FontWeight="Bold"
+                                       HorizontalAlignment="Center" Margin="0,0,0,12"/>
+                            <!-- 设备列表 -->
+                            <ItemsControl x:Name="ConnectedDeviceListItems">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="{DynamicResource PopupBorder}" CornerRadius="4"
+                                                Padding="8,6" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Model}" Foreground="{DynamicResource TextBrush}"
+                                                           FontSize="12" FontWeight="Bold" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Manufacturer}" Foreground="{DynamicResource TextBrush}"
+                                                           FontSize="10" Opacity="0.7" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <!-- 空状态：图片 + 提示文字 -->
+                            <StackPanel x:Name="ConnectedDeviceEmptyPanel" Visibility="Collapsed" HorizontalAlignment="Center" Margin="0,20,0,0">
+                                <Image Source="pack://application:,,,/images/nodevice.png"
+                                       Width="120" Height="120" Stretch="Uniform" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="ConnectedDeviceEmptyText"
+                                           Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[NoConnectedDevices]}"
+                                           Foreground="{DynamicResource TextBrush}" FontSize="12" Opacity="0.6"
+                                           TextWrapping="Wrap" TextAlignment="Center" Margin="0,10,0,0"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+        </Popup>
+
+        <!-- 虚拟网卡提示悬浮框（单击图标显示，点击外部或图标关闭） -->
+        <Popup x:Name="VirtualAdapterTipPopup" PlacementTarget="{Binding ElementName=VirtualAdapterTipIcon}"
+               Placement="Right" StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade">
+            <Border Background="{DynamicResource PopupBackground}" CornerRadius="4"
+                    BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1" Padding="8,5" MaxWidth="220">
+                <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ShowVirtualAdaptersTip]}"
+                           Foreground="{DynamicResource TextBrush}" FontSize="11" TextWrapping="Wrap"/>
+            </Border>
+        </Popup>
+
+        <!-- 画笔设置悬浮窗 -->
+        <Popup x:Name="PenSettingsPopup" PlacementTarget="{Binding ElementName=PenBtn}" Placement="Top" StaysOpen="True"
+               AllowsTransparency="True" PopupAnimation="Fade" Opened="PenSettingsPopup_Opened" Closed="PenSettingsPopup_Closed">
+            <!-- 内容保持不变（省略，与原始文件相同） -->
+            <Border Width="220" Background="{DynamicResource PopupBackground}" CornerRadius="6" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
+                    Padding="8">
+                <StackPanel>
+                    <!-- 标题栏 -->
+                    <Grid Margin="0,0,0,10">
+                        <TextBlock x:Name="PenSettingsTitleText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[PenSettings]}" 
+                                   Foreground="{DynamicResource TextBrush}" FontSize="14" FontWeight="Bold" 
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Button x:Name="PenSettingsCloseBtn" Click="ClosePenSettings_Click" 
+                                Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="Transparent" Width="20" Height="20">
+                                        <Viewbox Width="20" Height="20">
+                                            <Path Fill="{DynamicResource TextBrush}" Data="M16 2C8.2 2 2 8.2 2 16s6.2 14 14 14s14-6.2 14-14S23.8 2 16 2m5.4 21L16 17.6L10.6 23L9 21.4l5.4-5.4L9 10.6L10.6 9l5.4 5.4L21.4 9l1.6 1.6l-5.4 5.4l5.4 5.4z"/>
+                                        </Viewbox>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+
+                    <!-- 笔宽设置 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[PenWidthLabel]}" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Width="40"/>
+                        <Slider x:Name="PenWidthSlider" Minimum="1" Maximum="20" Value="2" Width="120"
+                                ValueChanged="PenWidthSlider_ValueChanged"/>
+                        <TextBlock x:Name="PenWidthValue" Text="2" Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" 
+                                   Margin="10,0,0,0" Width="20"/>
+                    </StackPanel>
+
+                    <!-- 颜色选择 -->
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- 第一行颜色 -->
+                        <Button Grid.Row="0" Grid.Column="0" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Black" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Black]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Black"/>
+                                <Path x:Name="CheckIcon_Black" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="0" Grid.Column="1" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Red" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Red]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Red"/>
+                                <Path x:Name="CheckIcon_Red" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="0" Grid.Column="2" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Green" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Green]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Green"/>
+                                <Path x:Name="CheckIcon_Green" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="0" Grid.Column="3" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Blue" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Blue]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Blue"/>
+                                <Path x:Name="CheckIcon_Blue" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="0" Grid.Column="4" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Yellow" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Yellow]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Yellow"/>
+                                <Path x:Name="CheckIcon_Yellow" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- 第二行颜色 -->
+                        <Button Grid.Row="1" Grid.Column="0" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="White" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[White]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="White"/>
+                                <Path x:Name="CheckIcon_White" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="1" Grid.Column="1" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Orange" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Orange]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Orange"/>
+                                <Path x:Name="CheckIcon_Orange" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="1" Grid.Column="2" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Purple" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Purple]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Purple"/>
+                                <Path x:Name="CheckIcon_Purple" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="1" Grid.Column="3" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Cyan" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Cyan]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Cyan"/>
+                                <Path x:Name="CheckIcon_Cyan" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="1" Grid.Column="4" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Magenta" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Magenta]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Magenta"/>
+                                <Path x:Name="CheckIcon_Magenta" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- 第三行颜色 -->
+                        <Button Grid.Row="2" Grid.Column="0" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Brown" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Brown]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Brown"/>
+                                <Path x:Name="CheckIcon_Brown" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="2" Grid.Column="1" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Pink" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Pink]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Pink"/>
+                                <Path x:Name="CheckIcon_Pink" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="2" Grid.Column="2" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Gray" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Gray]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Gray"/>
+                                <Path x:Name="CheckIcon_Gray" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="2" Grid.Column="3" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="DarkRed" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[DarkRed]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="DarkRed"/>
+                                <Path x:Name="CheckIcon_DarkRed" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="2" Grid.Column="4" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="DarkGreen" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[DarkGreen]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="DarkGreen"/>
+                                <Path x:Name="CheckIcon_DarkGreen" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+
+                        <!-- 第四行颜色 -->
+                        <Button Grid.Row="3" Grid.Column="0" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="DarkBlue" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[DarkBlue]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="DarkBlue"/>
+                                <Path x:Name="CheckIcon_DarkBlue" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="3" Grid.Column="1" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Gold" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Gold]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Gold"/>
+                                <Path x:Name="CheckIcon_Gold" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="3" Grid.Column="2" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Silver" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Silver]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Silver"/>
+                                <Path x:Name="CheckIcon_Silver" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="3" Grid.Column="3" Style="{StaticResource PenSettingsButtonStyle}" 
+                                Click="ColorButton_Click" Tag="Lime" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Lime]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Lime"/>
+                                <Path x:Name="CheckIcon_Lime" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                        <Button Grid.Row="3" Grid.Column="4" Style="{StaticResource PenSettingsButtonStyle}"
+                                Click="ColorButton_Click" Tag="Teal" ToolTip="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Teal]}">
+                            <Grid Style="{StaticResource ColorButtonContainerStyle}">
+                                <Rectangle Style="{StaticResource ColorRectangleStyle}" Fill="Teal"/>
+                                <Path x:Name="CheckIcon_Teal" Style="{StaticResource CheckIconStyle}"/>
+                            </Grid>
+                        </Button>
+                    </Grid>
+
+                    <!-- 更多颜色按钮 -->
+                    <Button x:Name="MoreColorsBtn" Click="MoreColorsBtn_Click" Margin="0,10,0,0" Height="28"
+                            Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[MoreColors]}"
+                            Foreground="{DynamicResource TextBrush}"
+                            Background="{DynamicResource ButtonBackground}"
+                            BorderBrush="{DynamicResource PopupBorder}"
+                            BorderThickness="1"
+                            Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="3">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="{DynamicResource ButtonHoverBackground}"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- 更多颜色悬浮窗 -->
+        <Popup x:Name="MoreColorsPopup" PlacementTarget="{Binding ElementName=MoreColorsBtn}" Placement="Top"
+               StaysOpen="True" AllowsTransparency="True" PopupAnimation="Fade"
+               Opened="MoreColorsPopup_Opened" Closed="MoreColorsPopup_Closed">
+            <Border Width="280" Background="{DynamicResource PopupBackground}" CornerRadius="6"
+                    BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1" Padding="10">
+                <StackPanel>
+                    <!-- 标题栏 -->
+                    <Grid Margin="0,0,0,10">
+                        <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[MoreColors]}"
+                                   Foreground="{DynamicResource TextBrush}" FontSize="14" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Button x:Name="MoreColorsCloseBtn" Click="CloseMoreColors_Click"
+                                Width="20" Height="20" HorizontalAlignment="Right" VerticalAlignment="Center"
+                                Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="Transparent" Width="20" Height="20">
+                                        <Viewbox Width="20" Height="20">
+                                            <Path Fill="{DynamicResource TextBrush}" Data="M16 2C8.2 2 2 8.2 2 16s6.2 14 14 14s14-6.2 14-14S23.8 2 16 2m5.4 21L16 17.6L10.6 23L9 21.4l5.4-5.4L9 10.6L10.6 9l5.4 5.4L21.4 9l1.6 1.6l-5.4 5.4l5.4 5.4z"/>
+                                        </Viewbox>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+
+                    <!-- SV 色板（整块连续渐变，非独立色块拼接） -->
+                    <Canvas x:Name="SvSquare" Width="240" Height="150" Margin="0,0,0,8"
+                            ClipToBounds="True"
+                            MouseLeftButtonDown="SvSquare_MouseLeftButtonDown"
+                            MouseLeftButtonUp="SvSquare_MouseLeftButtonUp"
+                            MouseMove="SvSquare_MouseMove">
+                        <!-- 底层：当前色相纯色 -->
+                        <Rectangle x:Name="SvHueLayer" Width="240" Height="150"/>
+                        <!-- 中层：水平 白→透明 （饱和度） -->
+                        <Rectangle Width="240" Height="150">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Offset="0" Color="#FFFFFFFF"/>
+                                    <GradientStop Offset="1" Color="#00FFFFFF"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <!-- 上层：垂直 透明→黑 （明度） -->
+                        <Rectangle Width="240" Height="150">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Offset="0" Color="#00000000"/>
+                                    <GradientStop Offset="1" Color="#FF000000"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <!-- 选中位置标记 -->
+                        <Ellipse x:Name="SvMarker" Width="14" Height="14" Stroke="White" StrokeThickness="2"/>
+                    </Canvas>
+
+                    <!-- 色相条 -->
+                    <Canvas x:Name="HueBar" Width="240" Height="16" Margin="0,0,0,10"
+                            ClipToBounds="True"
+                            MouseLeftButtonDown="HueBar_MouseLeftButtonDown"
+                            MouseLeftButtonUp="HueBar_MouseLeftButtonUp"
+                            MouseMove="HueBar_MouseMove">
+                        <Rectangle Width="240" Height="16" RadiusX="3" RadiusY="3">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Offset="0.000" Color="#FFFF0000"/>
+                                    <GradientStop Offset="0.166" Color="#FFFFFF00"/>
+                                    <GradientStop Offset="0.333" Color="#FF00FF00"/>
+                                    <GradientStop Offset="0.500" Color="#FF00FFFF"/>
+                                    <GradientStop Offset="0.666" Color="#FF0000FF"/>
+                                    <GradientStop Offset="0.833" Color="#FFFF00FF"/>
+                                    <GradientStop Offset="1.000" Color="#FFFF0000"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Border x:Name="HueMarker" Width="6" Height="20" BorderBrush="White" BorderThickness="2"
+                                Background="Transparent" Canvas.Left="0" Canvas.Top="-2"/>
+                    </Canvas>
+
+                    <!-- 十六进制输入 -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10" HorizontalAlignment="Center">
+                        <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[HexLabel]}"
+                                   Foreground="{DynamicResource TextBrush}" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBox x:Name="HexInput" Width="110" MaxLength="7"
+                                 TextChanged="HexInput_TextChanged"
+                                 Foreground="{DynamicResource TextBrush}"
+                                 Background="{DynamicResource PopupBackground}"
+                                 BorderBrush="{DynamicResource PopupBorder}"
+                                 VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <!-- 当前颜色预览 + 确定取消 -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Border x:Name="MoreColorPreview" Width="40" Height="24"
+                                BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1" Margin="0,0,10,0"/>
+                        <Button Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[OK]}"
+                                Width="70" Click="MoreColorsOk_Click" Margin="0,0,5,0"
+                                Foreground="{DynamicResource TextBrush}"/>
+                        <Button Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Cancel]}"
+                                Width="70" Click="CloseMoreColors_Click"
+                                Foreground="{DynamicResource TextBrush}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- 清屏确认悬浮窗 -->
+        <Popup x:Name="ClearConfirmPopup" PlacementTarget="{Binding ElementName=EraserBtn}" Placement="Custom" StaysOpen="False"
+               AllowsTransparency="True" PopupAnimation="Fade" Opened="ClearConfirmPopup_Opened" Closed="ClearConfirmPopup_Closed"
+               CustomPopupPlacementCallback="ClearConfirmPopup_PlacementCallback">
+            <!-- 内容保持不变（省略，与原始文件相同） -->
+            <Border Width="280" Background="{DynamicResource PopupBackground}" CornerRadius="8" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1"
+                    Padding="15">
+                <StackPanel>
+                    <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ClearScreenConfirm]}" 
+                               Foreground="{DynamicResource TextBrush}" FontSize="14" FontWeight="Bold" 
+                               HorizontalAlignment="Center" Margin="0,0,0,15"/>
+                    <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[SlideToConfirm]}" 
+                               Foreground="{DynamicResource TextBrush}" FontSize="11" Opacity="0.7"
+                               HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <Grid Height="40">
+                        <Border x:Name="SliderTrack" Background="#404040" CornerRadius="20" />
+                        <Border x:Name="SliderProgress" Background="#FF6B6B" CornerRadius="20" 
+                                HorizontalAlignment="Left" Width="0"/>
+                        <TextBlock x:Name="ConfirmText" Text="→" Foreground="White" FontSize="16"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   IsHitTestVisible="False"/>
+                        <Border x:Name="SliderThumb" Background="#FF4444" CornerRadius="18" 
+                                Width="36" Height="36" HorizontalAlignment="Left" Margin="2,0,0,0"
+                                Cursor="Hand" MouseLeftButtonDown="SliderThumb_MouseLeftButtonDown"
+                                MouseMove="SliderThumb_MouseMove" MouseLeftButtonUp="SliderThumb_MouseLeftButtonUp">
+                            <TextBlock Text="→" Foreground="White" FontSize="14" FontWeight="Bold"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       IsHitTestVisible="False"/>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- 形状设置弹出窗口 -->
+
+        <!-- 触控信息悬浮窗 -->
+        <Popup x:Name="TouchInfoPopup" 
+               Placement="Absolute" 
+               AllowsTransparency="True" 
+               StaysOpen="True"
+               IsOpen="False"
+               PopupAnimation="Fade">
+            <Border Background="#CC2C3E50" 
+                    CornerRadius="8" 
+                    Padding="15,10"
+                    BorderBrush="#34495E"
+                    BorderThickness="2"
+                    MinWidth="250">
+                <StackPanel>
+                    <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[TouchInfo]}" 
+                               Foreground="White" 
+                               FontSize="16" 
+                               FontWeight="Bold"
+                               HorizontalAlignment="Center"
+                               Margin="0,0,0,5"/>
+                    <TextBlock x:Name="TouchCountText" 
+                               Foreground="White" 
+                               FontSize="14" 
+                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[TouchPoints], StringFormat='{}{0}: 0'}"/>
+                    <TextBlock x:Name="TouchAreaText" 
+                               Foreground="#DDDDDD" 
+                               FontSize="12"
+                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Area], StringFormat='{}{0}: 0 像素²'}"
+                               Margin="0,2,0,0"/>
+                    <TextBlock x:Name="SDKTouchAreaText" 
+                       Foreground="#DDDDDD" 
+                       FontSize="12"
+                       Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[SDKArea], StringFormat='{}{0}: 0 像素²'}"
+                       Margin="0,2,0,0"/>
+                    <TextBlock x:Name="TouchCenterText" 
+                               Foreground="#DDDDDD" 
+                               FontSize="12"
+                       Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Center], StringFormat='{}{0}: (0, 0)'}"
+                       Margin="0,2,0,0"/>
+                    <Button Click="CloseTouchInfo_Click" 
+                            Margin="0,10,0,0" 
+                            Background="#34495E" 
+                            Foreground="White" 
+                            Height="25"
+                            FontSize="12">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Close]}" FontSize="10" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- 更多菜单弹出窗口 - 修改：按钮内容居中 -->
+        <Popup x:Name="MoreMenuPopup" PlacementTarget="{Binding ElementName=MoreButton}" Placement="Top" StaysOpen="False"
+               AllowsTransparency="True" PopupAnimation="Fade" Closed="MoreMenuPopup_Closed">
+            <Border Width="150" Background="{DynamicResource PopupBackground}" CornerRadius="6" BorderBrush="{DynamicResource PopupBorder}" BorderThickness="1">
+                <StackPanel HorizontalAlignment="Stretch">
+                    <Button Click="SwitchCamera_Click" 
+                            Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" Height="40"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <TextBlock x:Name="SwitchCameraText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[SwitchCamera]}" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Click="OpenAdjustVideo_Click" 
+                            Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" Height="40"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <TextBlock x:Name="AdjustVideoText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[AdjustVideo]}" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Click="OpenPerspectiveCorrection_Click" 
+                            Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" Height="40"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <TextBlock x:Name="PerspectiveCorrectionText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[PerspectiveCorrection]}" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Click="ClearCorrection_Click" 
+                            Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" Height="40"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <TextBlock x:Name="ClearCorrectionText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ClearCorrection]}" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Click="OpenSettings_Click" 
+                            Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" Height="40"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <TextBlock x:Name="SettingsText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Settings]}" VerticalAlignment="Center"/>
+                    </Button>
+                    <Button Click="Exit_Click" 
+                            Background="Transparent" BorderThickness="0" Foreground="{DynamicResource TextBrush}" Height="40"
+                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center">
+                        <TextBlock x:Name="ExitText" Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Exit]}" VerticalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+            </Border>
+        </Popup>
+
+        <!-- 梯形校正模式界面 - 移到最顶层 -->
+        <Grid x:Name="PerspectiveCorrectionGrid" 
+              Grid.Row="0"
+              Panel.ZIndex="1000"
+              Background="#CC2B2B2B"
+              Visibility="Collapsed">
+            <!-- 添加一个背景层来确保视频内容可见 -->
+            <Grid Background="#33000000">
+                <!-- 校正点容器 -->
+                <Canvas x:Name="CorrectionCanvas" 
+                        Background="Transparent"
+                        MouseLeftButtonDown="CorrectionCanvas_MouseDown"
+                        MouseMove="CorrectionCanvas_MouseMove"
+                        MouseLeftButtonUp="CorrectionCanvas_MouseUp">
+                    <!-- 校正四边形 -->
+                    <Polygon x:Name="CorrectionPolygon" 
+                             Stroke="White" 
+                             StrokeThickness="2" 
+                             StrokeDashArray="5,5"
+                             Fill="#40FFFFFF"
+                             Points="100,100 500,100 500,300 100,300"/>
+
+                    <!-- 四个校正点 -->
+                    <Ellipse x:Name="CorrectionPoint0" 
+                             Canvas.Left="100" Canvas.Top="100"
+                             Width="20" Height="20" 
+                             Fill="Red" Cursor="Hand"/>
+                    <Ellipse x:Name="CorrectionPoint1" 
+                             Canvas.Left="500" Canvas.Top="100"
+                             Width="20" Height="20" 
+                             Fill="Red" Cursor="Hand"/>
+                    <Ellipse x:Name="CorrectionPoint2" 
+                             Canvas.Left="500" Canvas.Top="300"
+                             Width="20" Height="20" 
+                             Fill="Red" Cursor="Hand"/>
+                    <Ellipse x:Name="CorrectionPoint3" 
+                             Canvas.Left="100" Canvas.Top="300"
+                             Width="20" Height="20" 
+                             Fill="Red" Cursor="Hand"/>
+
+                    <!-- 点标签 -->
+                    <TextBlock x:Name="CorrectionLabel0" 
+                               Canvas.Left="110" Canvas.Top="125"
+                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Point1]}" Foreground="White" FontSize="12"/>
+                    <TextBlock x:Name="CorrectionLabel1" 
+                               Canvas.Left="510" Canvas.Top="125"
+                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Point2]}" Foreground="White" FontSize="12"/>
+                    <TextBlock x:Name="CorrectionLabel2" 
+                               Canvas.Left="510" Canvas.Top="325"
+                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Point3]}" Foreground="White" FontSize="12"/>
+                    <TextBlock x:Name="CorrectionLabel3" 
+                               Canvas.Left="110" Canvas.Top="325"
+                               Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Point4]}" Foreground="White" FontSize="12"/>
+                </Canvas>
+
+                <!-- 校正控制按钮 -->
+                <StackPanel Orientation="Horizontal" 
+                            HorizontalAlignment="Center" 
+                            VerticalAlignment="Bottom"
+                            Margin="0,0,0,20">
+                    <Button Style="{DynamicResource ButtonStyle}" x:Name="ApplyCorrectionButton" 
+                            Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Complete]}" 
+                            Click="ApplyCorrectionButton_Click"
+                            Margin="5" Width="80" Height="40"/>
+                    <Button Style="{DynamicResource ButtonStyle}" x:Name="ResetCorrectionButton" 
+                            Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Reset]}" 
+                            Click="ResetCorrectionButton_Click"
+                            Margin="5" Width="80" Height="40"/>
+                    <Button Style="{DynamicResource ButtonStyle}" x:Name="CancelCorrectionButton" 
+                            Content="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Cancel]}" 
+                            Click="CancelCorrectionButton_Click"
+                            Margin="5" Width="80" Height="40"/>
+                </StackPanel>
+
+                <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[CorrectionHint]}" 
+                           Foreground="White" FontSize="14"
+                           HorizontalAlignment="Center" 
+                           VerticalAlignment="Top"
+                           Margin="0,20,0,0"/>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
