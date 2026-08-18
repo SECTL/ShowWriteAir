@@ -309,6 +309,13 @@ namespace ShowWrite.Services
                 photo.Image = image;
                 photo.Thumbnail = thumbnail;
                 photo.Strokes = strokes != null ? new StrokeCollection(strokes) : new StrokeCollection();
+                // 记录笔迹创建时 InkCanvas 的尺寸，便于回看时按比例缩放对齐照片
+                var inkSize = _drawingManager.GetInkCanvasSize();
+                photo.OriginInkWidth = inkSize.Width;
+                photo.OriginInkHeight = inkSize.Height;
+                // 快照当前 InkCanvas 上所有矢量/位图填充，确保切换照片或重启后填充不丢失
+                photo.FillPaths = _drawingManager.GetFillPathsSnapshot();
+                photo.FillImages = _drawingManager.GetFillImagesSnapshot();
                 photo.FilePath = filePath;
                 photo.Source = source;
 
@@ -502,10 +509,17 @@ namespace ShowWrite.Services
                 }
 
                 // 触发照片选择事件 - 传递完整的 photoWithStrokes 对象
+                // OnPhotoSelected 处理器会调用带 origin 尺寸的 SwitchToPhotoStrokes 重载，按比例缩放笔迹以对齐照片。
                 PhotoSelected?.Invoke(photoWithStrokes);
 
-                // 切换绘制管理器的StrokeCollection到照片的笔迹
-                _drawingManager.SwitchToPhotoStrokes(photoWithStrokes.Strokes);
+                // 兜底：若事件未被订阅或未完成笔迹切换，这里也用带 origin 尺寸与 fill 数据的重载切换一次，
+                // 保证不会用未缩放的笔迹覆盖已缩放的结果，并还原填充。
+                _drawingManager.SwitchToPhotoStrokes(
+                    photoWithStrokes.Strokes,
+                    photoWithStrokes.OriginInkWidth,
+                    photoWithStrokes.OriginInkHeight,
+                    photoWithStrokes.FillPaths,
+                    photoWithStrokes.FillImages);
 
                 // 重置缩放状态
                 _panZoomManager.ResetZoom();
@@ -535,6 +549,13 @@ namespace ShowWrite.Services
                 if (_currentPhoto != null)
                 {
                     _currentPhoto.Strokes = new StrokeCollection(_drawingManager.GetStrokes());
+                    // 同步更新笔迹创建时的 InkCanvas 尺寸，保证下次回看能正确对齐
+                    var size = _drawingManager.GetInkCanvasSize();
+                    _currentPhoto.OriginInkWidth = size.Width;
+                    _currentPhoto.OriginInkHeight = size.Height;
+                    // 同步快照填充，避免切换/返回实时模式后丢失
+                    _currentPhoto.FillPaths = _drawingManager.GetFillPathsSnapshot();
+                    _currentPhoto.FillImages = _drawingManager.GetFillImagesSnapshot();
                 }
 
                 _isLiveMode = true;

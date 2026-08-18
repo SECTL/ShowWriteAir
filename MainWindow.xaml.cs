@@ -431,16 +431,18 @@ namespace ShowWrite
                     videoArea.Background = WinBrushes.Transparent;
                 }
 
-                // 3. 切换到照片对应的笔迹
+                // 3. 切换到照片对应的笔迹（按 origin 尺寸做坐标缩放，解决窗口尺寸变化导致的笔迹与照片错位）
+                //    同时还原矢量/位图填充，并按同一 scaleX/scaleY 缩放以保持对齐
                 if (photo.Strokes != null)
                 {
-                    _drawingManager.SwitchToPhotoStrokes(photo.Strokes);
-                    Logger.Debug("MainWindow", $"已切换到照片笔迹，包含 {photo.Strokes.Count} 个笔迹");
+                    _drawingManager.SwitchToPhotoStrokes(photo.Strokes, photo.OriginInkWidth, photo.OriginInkHeight,
+                        photo.FillPaths, photo.FillImages);
+                    Logger.Debug("MainWindow", $"已切换到照片笔迹，包含 {photo.Strokes.Count} 个笔迹 (origin {photo.OriginInkWidth}x{photo.OriginInkHeight}, 填充 {(photo.FillPaths?.Count ?? 0)}+{(photo.FillImages?.Count ?? 0)})");
                 }
                 else
                 {
                     Logger.Warning("MainWindow", "照片没有关联的笔迹");
-                    _drawingManager.SwitchToPhotoStrokes(new StrokeCollection());
+                    _drawingManager.SwitchToPhotoStrokes(new StrokeCollection(), 0, 0, photo.FillPaths, photo.FillImages);
                 }
 
                 // 4. 更新UI状态
@@ -764,6 +766,11 @@ namespace ShowWrite
 
                 // 加载配置
                 LoadConfig();
+
+                // LoadConfig 加载真实配置后，重新应用画板模式等运行时设置
+                // （InitializeUI 中的 ApplyConfig 用的是字段初始化的默认值）
+                _drawingManager.ApplyConfig(config);
+                UpdatePaintBucketButtonVisibility();
 
                 // 应用主题
                 ApplyTheme();
@@ -2409,6 +2416,14 @@ namespace ShowWrite
         {
             try
             {
+                // 连带关闭"更多颜色"悬浮窗：MoreColorsPopup 的 PlacementTarget 位于本窗内部，
+                // 若仅关闭本窗而留下它，会形成一个 PlacementTarget 已隐藏的悬空 Popup，
+                // 导致画笔选色窗无法再次打开。
+                if (MoreColorsPopup != null && MoreColorsPopup.IsOpen)
+                {
+                    MoreColorsPopup.IsOpen = false;
+                }
+
                 // 确保画笔按钮保持选中状态
                 if (_drawingManager.CurrentMode == DrawingManager.ToolMode.Pen)
                 {
@@ -2686,6 +2701,26 @@ namespace ShowWrite
 
             Logger.Info("MainWindow", $"开始导入 {filePaths.Length} 个图片文件");
 
+            // 特殊情况：仅导入一份 SVG 笔迹，且当前正选中一张照片时，
+            // 将该笔迹按比例校准后追加到当前照片（而不是创建新照片）
+            if (filePaths.Length == 1
+                && System.IO.Path.GetExtension(filePaths[0])?.Equals(".svg", StringComparison.OrdinalIgnoreCase) == true
+                && _photoPopupManager?.CurrentPhoto != null
+                && _photoPopupManager.CurrentPhoto.Image != null)
+            {
+                string svgPath = filePaths[0];
+                if (System.IO.File.Exists(svgPath))
+                {
+                    if (ImportSvgToCurrentPhoto(svgPath))
+                    {
+                        Logger.Info("MainWindow", $"SVG 笔迹已校准并追加到当前选中照片: {svgPath}");
+                        return;
+                    }
+                    // 校准追加失败时回退到常规导入流程
+                    Logger.Warning("MainWindow", "SVG 笔迹追加到当前照片失败，回退到常规导入流程");
+                }
+            }
+
             int successCount = 0;
             int failCount = 0;
 
@@ -2803,10 +2838,16 @@ namespace ShowWrite
         }
 
         /// <summary>
-        /// 导入 SVG 矢量图文件，将其中路径解析为可编辑的笔迹
+        /// 解析 SVG 文件，提取宽高、笔迹和填充图片（不创建新照片）
         /// </summary>
-        private bool ImportSvgFile(string filePath)
+        private bool TryParseSvgFile(string filePath, out int width, out int height, out StrokeCollection strokes, out List<(BitmapSource bitmap, double x, double y, double w, double h)> fillBitmaps, out List<(string pathData, System.Windows.Media.Color color)> fillPaths)
         {
+            width = 1920;
+            height = 1080;
+            strokes = new StrokeCollection();
+            fillBitmaps = new List<(BitmapSource, double, double, double, double)>();
+            fillPaths = new List<(string, System.Windows.Media.Color)>();
+
             try
             {
                 var doc = System.Xml.Linq.XDocument.Load(filePath);
@@ -2818,8 +2859,8 @@ namespace ShowWrite
                 }
 
                 // 从 <svg> 元素读取宽高
-                int width = ParseSvgLength(root.Attribute("width")?.Value, 0);
-                int height = ParseSvgLength(root.Attribute("height")?.Value, 0);
+                width = ParseSvgLength(root.Attribute("width")?.Value, 0);
+                height = ParseSvgLength(root.Attribute("height")?.Value, 0);
 
                 // 若未指定宽高，则使用 viewBox
                 if (width <= 0 || height <= 0)
@@ -2838,18 +2879,13 @@ namespace ShowWrite
                 if (width <= 0) width = 1920;
                 if (height <= 0) height = 1080;
 
-                // 创建透明背景的占位图
-                var placeholder = CreateTransparentPlaceholder(width, height);
-
                 // 解析所有 <path> 元素为笔迹
-                var strokes = new StrokeCollection();
                 var pathElements = root.Descendants().Where(e => e.Name.LocalName == "path").ToList();
                 Logger.Info("MainWindow", $"SVG 包含 {pathElements.Count} 个 path 元素");
 
                 // 解析所有 <image> 元素（油漆桶填充图片等位图内容）
                 var imageElements = root.Descendants().Where(e => e.Name.LocalName == "image").ToList();
                 Logger.Info("MainWindow", $"SVG 包含 {imageElements.Count} 个 image 元素");
-                var fillBitmaps = new List<(BitmapSource bitmap, double x, double y, double w, double h)>();
 
                 foreach (var imgElem in imageElements)
                 {
@@ -2903,6 +2939,29 @@ namespace ShowWrite
                     if (string.IsNullOrEmpty(d)) continue;
 
                     var invariant = System.Globalization.CultureInfo.InvariantCulture;
+
+                    // 识别矢量填充路径（由 ExportStrokesAsSvg 导出的油漆桶填充）
+                    var swFillAttr = pathElem.Attribute("data-sw-fill")?.Value;
+                    var fillAttrValue = pathElem.Attribute("fill")?.Value;
+                    var strokeAttrValue = pathElem.Attribute("stroke")?.Value;
+                    bool hasNoStroke = string.IsNullOrEmpty(strokeAttrValue) || strokeAttrValue == "none";
+                    bool hasFill = !string.IsNullOrEmpty(fillAttrValue) && fillAttrValue != "none";
+                    bool isFillPath = swFillAttr == "1" || (hasFill && hasNoStroke);
+
+                    if (isFillPath)
+                    {
+                        try
+                        {
+                            var fillColor = ParseSvgColor(fillAttrValue ?? "#000000", Colors.Black);
+                            // 保存矢量 pathData（不再光栅化为位图，保持矢量）
+                            fillPaths.Add((d, fillColor));
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Warning("MainWindow", $"保存矢量填充路径失败: {ex.Message}");
+                        }
+                        continue;
+                    }
 
                     // 解析颜色/不透明度/线宽：优先 stroke 属性，回退到 fill（兼容旧格式或外部填充式 SVG）
                     System.Windows.Media.Color strokeColor = Colors.Black;
@@ -2987,20 +3046,194 @@ namespace ShowWrite
                     }
                 }
 
-                // 仅将填充图片渲染到占位图（笔迹作为矢量加载到 InkCanvas，不渲染为位图，避免出现"位图+矢量"双图）
-                if (fillBitmaps.Count > 0)
-                {
-                    placeholder = RenderFillImagesToBitmap(width, height, fillBitmaps);
-                }
-
-                _photoPopupManager.AddPhoto(placeholder, strokes, filePath);
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Error("MainWindow", $"导入 SVG 失败: {filePath}, {ex.Message}", ex);
+                Logger.Error("MainWindow", $"解析 SVG 失败: {filePath}, {ex.Message}", ex);
                 return false;
             }
+        }
+
+        /// <summary>
+        /// 导入 SVG 矢量图文件，将其中路径解析为可编辑的笔迹（作为新照片加入照片栏）
+        /// </summary>
+        private bool ImportSvgFile(string filePath)
+        {
+            if (!TryParseSvgFile(filePath, out int width, out int height, out var strokes, out var fillBitmaps, out var fillPaths))
+                return false;
+
+            // 创建透明背景的占位图
+            var placeholder = CreateTransparentPlaceholder(width, height);
+
+            // 仅将位图填充图片渲染到占位图（笔迹作为矢量加载到 InkCanvas，不渲染为位图，避免出现"位图+矢量"双图）
+            if (fillBitmaps.Count > 0)
+            {
+                placeholder = RenderFillImagesToBitmap(width, height, fillBitmaps);
+            }
+
+            // 在 AddPhoto 之前预先构造好新照片的矢量填充快照。
+            // 原因：AddPhoto 内部会调用 _drawingManager.GetFillPathsSnapshot() 自动快照当前 InkCanvas 上的填充，
+            // 但此时 InkCanvas 上还没添加本次 SVG 的填充（AddFillPath 在下方才调用），
+            // 自动快照会捕获到错误状态（空或上一张照片的填充）。这里直接从 SVG 解析结果构造正确的快照。
+            var newFillPaths = new List<DrawingManager.FillPathRecord>();
+            if (fillPaths != null && fillPaths.Count > 0)
+            {
+                foreach (var fp in fillPaths)
+                {
+                    try
+                    {
+                        var geometry = System.Windows.Media.PathGeometry.CreateFromGeometry(
+                            System.Windows.Media.Geometry.Parse(fp.pathData));
+                        if (geometry == null) continue;
+                        if (geometry.CanFreeze) geometry.Freeze();
+                        newFillPaths.Add(new DrawingManager.FillPathRecord { Geometry = geometry, Color = fp.color });
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Warning("MainWindow", $"构造矢量填充快照失败: {ex.Message}");
+                    }
+                }
+            }
+
+            _photoPopupManager.AddPhoto(placeholder, strokes, filePath);
+
+            // 覆盖 AddPhoto 内部捕获的（可能错误的）填充快照，确保新照片持有的是本次 SVG 的填充
+            var newPhoto = _photoPopupManager?.CurrentPhoto;
+            if (newPhoto != null)
+            {
+                newPhoto.FillPaths = newFillPaths;
+                // 位图填充已直接渲染进 placeholder.Image，无需单独保存 FillImages 快照
+                newPhoto.FillImages = null;
+            }
+
+            // 矢量填充 Path 也加载到 InkCanvas（位于笔画下方，保持矢量）
+            if (fillPaths != null && fillPaths.Count > 0)
+            {
+                foreach (var fp in fillPaths)
+                {
+                    _drawingManager?.AddFillPath(fp.pathData, fp.color, 1.0, 1.0);
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 将 SVG 笔迹校准后追加到当前选中照片（不创建新照片）。
+        /// 校准：将笔迹从 SVG 坐标空间 (svgWidth × svgHeight) 缩放到当前照片像素空间 (photoW × photoH)。
+        /// </summary>
+        private bool ImportSvgToCurrentPhoto(string filePath)
+        {
+            var currentPhoto = _photoPopupManager?.CurrentPhoto;
+            if (currentPhoto == null || currentPhoto.Image == null)
+            {
+                Logger.Warning("MainWindow", "无法导入笔迹到当前照片：当前没有选中照片");
+                return false;
+            }
+
+            if (!TryParseSvgFile(filePath, out int svgWidth, out int svgHeight, out var strokes, out var fillBitmaps, out var fillPaths))
+                return false;
+
+            if ((strokes == null || strokes.Count == 0) && (fillBitmaps == null || fillBitmaps.Count == 0) && (fillPaths == null || fillPaths.Count == 0))
+            {
+                Logger.Warning("MainWindow", $"SVG 文件中没有可导入的笔迹或填充: {filePath}");
+                return false;
+            }
+
+            int photoW = currentPhoto.Image.PixelWidth;
+            int photoH = currentPhoto.Image.PixelHeight;
+            if (photoW <= 0) photoW = svgWidth;
+            if (photoH <= 0) photoH = svgHeight;
+
+            // 校准：将 SVG 坐标（照片像素空间）反向缩放到目标 InkCanvas DIP 空间
+            // 导出端把 InkCanvas DIP 缩放到照片像素空间，导入时需做反向缩放以恢复 InkCanvas DIP
+            var ink = (InkCanvas)FindName("Ink");
+            double inkW = ink?.ActualWidth ?? 0;
+            double inkH = ink?.ActualHeight ?? 0;
+            double scaleX = (inkW > 0 && svgWidth > 0) ? inkW / svgWidth : 1.0;
+            double scaleY = (inkH > 0 && svgHeight > 0) ? inkH / svgHeight : 1.0;
+            if (double.IsNaN(scaleX) || double.IsInfinity(scaleX) || scaleX <= 0) scaleX = 1.0;
+            if (double.IsNaN(scaleY) || double.IsInfinity(scaleY) || scaleY <= 0) scaleY = 1.0;
+
+            bool needScale = Math.Abs(scaleX - 1.0) > 1e-6 || Math.Abs(scaleY - 1.0) > 1e-6;
+
+            // 追加填充图片（校准位置与尺寸，位于笔画下方）
+            if (fillBitmaps != null && fillBitmaps.Count > 0)
+            {
+                foreach (var fb in fillBitmaps)
+                {
+                    double fx = fb.x * scaleX;
+                    double fy = fb.y * scaleY;
+                    double fw = fb.w * scaleX;
+                    double fh = fb.h * scaleY;
+                    _drawingManager?.AddFillImage(fb.bitmap, fx, fy, fw, fh);
+                }
+            }
+
+            // 追加矢量填充 Path（位于笔画下方，按 SVG -> InkCanvas 缩放）
+            if (fillPaths != null && fillPaths.Count > 0)
+            {
+                foreach (var fp in fillPaths)
+                {
+                    _drawingManager?.AddFillPath(fp.pathData, fp.color, scaleX, scaleY);
+                }
+            }
+
+            // 追加笔迹（校准后）
+            if (strokes != null && strokes.Count > 0)
+            {
+                if (needScale)
+                {
+                    strokes = ScaleStrokes(strokes, scaleX, scaleY);
+                }
+                _drawingManager?.AddStrokes(strokes);
+            }
+
+            // 保存快照到当前照片以持久化
+            currentPhoto.Strokes = _drawingManager?.GetStrokes() ?? new StrokeCollection();
+            // 同步快照矢量/位图填充，使切换照片或回看时填充不再丢失
+            currentPhoto.FillPaths = _drawingManager?.GetFillPathsSnapshot() ?? new List<DrawingManager.FillPathRecord>();
+            currentPhoto.FillImages = _drawingManager?.GetFillImagesSnapshot() ?? new List<DrawingManager.FillImageRecord>();
+            // 同步更新 InkCanvas 尺寸，便于后续切换/回看时按比例缩放对齐
+            var inkSize3 = _drawingManager?.GetInkCanvasSize() ?? new System.Windows.Size(0, 0);
+            currentPhoto.OriginInkWidth = inkSize3.Width;
+            currentPhoto.OriginInkHeight = inkSize3.Height;
+
+            Logger.Info("MainWindow", $"已将笔迹/填充校准后追加到当前照片 (SVG {svgWidth}x{svgHeight} -> 照片 {photoW}x{photoH}, 笔迹 {strokes?.Count ?? 0} 条, 位图填充 {fillBitmaps?.Count ?? 0} 张, 矢量填充 {fillPaths?.Count ?? 0} 条): {filePath}");
+            return true;
+        }
+
+        /// <summary>
+        /// 按比例缩放笔迹坐标及线宽（用于将笔迹从一个坐标系映射到另一个坐标系）
+        /// </summary>
+        private static StrokeCollection ScaleStrokes(StrokeCollection strokes, double scaleX, double scaleY)
+        {
+            var result = new StrokeCollection();
+            // 线宽按面积守恒缩放，保持视觉比例
+            double widthScale = Math.Sqrt(scaleX * scaleY);
+            if (double.IsNaN(widthScale) || double.IsInfinity(widthScale) || widthScale <= 0)
+                widthScale = 1.0;
+
+            foreach (Stroke stroke in strokes)
+            {
+                var srcPoints = stroke.StylusPoints;
+                if (srcPoints == null || srcPoints.Count == 0) continue;
+
+                var newPoints = new StylusPointCollection();
+                for (int i = 0; i < srcPoints.Count; i++)
+                {
+                    var p = srcPoints[i];
+                    newPoints.Add(new StylusPoint(p.X * scaleX, p.Y * scaleY, p.PressureFactor));
+                }
+
+                var newStroke = new Stroke(newPoints);
+                var attrs = stroke.DrawingAttributes.Clone();
+                attrs.Width = Math.Max(0.1, attrs.Width * widthScale);
+                attrs.Height = Math.Max(0.1, attrs.Height * widthScale);
+                newStroke.DrawingAttributes = attrs;
+                result.Add(newStroke);
+            }
+            return result;
         }
 
         /// <summary>
@@ -3808,14 +4041,16 @@ namespace ShowWrite
                 videoArea.Background = WinBrushes.Transparent;
             }
 
-            // 切换到照片对应的笔迹
+            // 切换到照片对应的笔迹（按 origin 尺寸做坐标缩放，解决窗口尺寸变化导致的笔迹与照片错位）
+            // 同时还原矢量/位图填充，并按同一 scaleX/scaleY 缩放以保持对齐
             if (photo.Strokes != null)
             {
-                _drawingManager.SwitchToPhotoStrokes(photo.Strokes);
+                _drawingManager.SwitchToPhotoStrokes(photo.Strokes, photo.OriginInkWidth, photo.OriginInkHeight,
+                    photo.FillPaths, photo.FillImages);
             }
             else
             {
-                _drawingManager.SwitchToPhotoStrokes(new StrokeCollection());
+                _drawingManager.SwitchToPhotoStrokes(new StrokeCollection(), 0, 0, photo.FillPaths, photo.FillImages);
             }
 
             // 更新UI状态
@@ -3899,7 +4134,16 @@ namespace ShowWrite
                 if (ext == ".svg")
                 {
                     var fillImages = _drawingManager?.GetFillImages() ?? new List<WinImage>();
-                    ExportStrokesAsSvg(currentPhoto.Strokes, dlg.FileName, width, height, fillImages);
+                    // 计算 InkCanvas DIP 坐标空间 -> 照片像素空间的缩放比例
+                    // 笔迹/填充坐标存于 InkCanvas DIP 空间，SVG viewBox 是照片像素空间，需统一缩放
+                    var ink = (InkCanvas)FindName("Ink");
+                    double inkW = ink?.ActualWidth ?? 0;
+                    double inkH = ink?.ActualHeight ?? 0;
+                    double coordScaleX = (inkW > 0) ? width / inkW : 1.0;
+                    double coordScaleY = (inkH > 0) ? height / inkH : 1.0;
+                    if (double.IsNaN(coordScaleX) || double.IsInfinity(coordScaleX) || coordScaleX <= 0) coordScaleX = 1.0;
+                    if (double.IsNaN(coordScaleY) || double.IsInfinity(coordScaleY) || coordScaleY <= 0) coordScaleY = 1.0;
+                    ExportStrokesAsSvg(currentPhoto.Strokes, dlg.FileName, width, height, fillImages, coordScaleX, coordScaleY);
                 }
                 else // png
                 {
@@ -3921,12 +4165,64 @@ namespace ShowWrite
         /// 使用笔迹中心线(StylusPoints) + stroke/stroke-width，保证导出后可正确还原为可编辑笔迹
         /// 油漆桶填充图片以 base64 PNG 形式嵌入为 SVG &lt;image&gt; 元素
         /// </summary>
-        private void ExportStrokesAsSvg(StrokeCollection strokes, string filePath, int width, int height, List<WinImage> fillImages = null)
+        private void ExportStrokesAsSvg(StrokeCollection strokes, string filePath, int width, int height, List<WinImage> fillImages = null,
+            double coordScaleX = 1.0, double coordScaleY = 1.0)
         {
             var sb = new StringBuilder();
             sb.AppendLine($"<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" width=\"{width}\" height=\"{height}\" viewBox=\"0 0 {width} {height}\">");
 
-            // 导出油漆桶填充图片（位于笔画下方）
+            // 导出油漆桶矢量填充 Path（位于笔画下方）：直接输出 Path.Data 多边形点
+            var fillPaths = _drawingManager?.GetFillPaths() ?? new List<System.Windows.Shapes.Path>();
+            foreach (var fp in fillPaths)
+            {
+                try
+                {
+                    if (fp.Data == null) continue;
+
+                    // Path 在 InkCanvas 中位置（默认 0,0）
+                    double left = InkCanvas.GetLeft(fp);
+                    double top = InkCanvas.GetTop(fp);
+                    if (double.IsNaN(left)) left = 0;
+                    if (double.IsNaN(top)) top = 0;
+                    left *= coordScaleX;
+                    top *= coordScaleY;
+
+                    // 提取填充颜色
+                    System.Windows.Media.Color color = Colors.Black;
+                    if (fp.Fill is System.Windows.Media.SolidColorBrush fillBrush && fillBrush.Color != null)
+                        color = fillBrush.Color;
+                    string fillColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+
+                    // 将 Geometry 转为 PathGeometry 提取多边形点
+                    var pg = fp.Data as System.Windows.Media.PathGeometry
+                             ?? System.Windows.Media.PathGeometry.CreateFromGeometry(fp.Data);
+                    if (pg == null) continue;
+
+                    var pathBuilder = new StringBuilder();
+                    foreach (var fig in pg.Figures)
+                    {
+                        var pts = ExtractFigurePoints(fig);
+                        if (pts.Count < 3) continue;
+                        pathBuilder.Append($"M {(pts[0].X * coordScaleX + left):F2} {(pts[0].Y * coordScaleY + top):F2}");
+                        for (int i = 1; i < pts.Count; i++)
+                        {
+                            pathBuilder.Append($" L {(pts[i].X * coordScaleX + left):F2} {(pts[i].Y * coordScaleY + top):F2}");
+                        }
+                        pathBuilder.Append(" Z");
+                    }
+
+                    if (pathBuilder.Length > 0)
+                    {
+                        sb.AppendLine($"  <path d=\"{pathBuilder}\" fill=\"{fillColor}\" fill-rule=\"evenodd\" stroke=\"none\" data-sw-fill=\"1\"/>");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Warning("MainWindow", $"导出矢量填充路径失败: {ex.Message}");
+                }
+            }
+
+            // 兼容旧位图填充（若仍有残留）
             if (fillImages != null && fillImages.Count > 0)
             {
                 foreach (var img in fillImages)
@@ -3936,17 +4232,36 @@ namespace ShowWrite
                         var bitmap = img.Source as BitmapSource;
                         if (bitmap == null) continue;
 
-                        string base64 = BitmapSourceToBase64Png(bitmap);
-                        if (string.IsNullOrEmpty(base64)) continue;
-
                         double left = InkCanvas.GetLeft(img);
                         double top = InkCanvas.GetTop(img);
                         if (double.IsNaN(left)) left = 0;
                         if (double.IsNaN(top)) top = 0;
-                        double imgW = img.Width > 0 ? img.Width : bitmap.PixelWidth;
-                        double imgH = img.Height > 0 ? img.Height : bitmap.PixelHeight;
+                        left *= coordScaleX;
+                        top *= coordScaleY;
 
-                        sb.AppendLine($"  <image x=\"{left:F2}\" y=\"{top:F2}\" width=\"{imgW:F2}\" height=\"{imgH:F2}\" xlink:href=\"data:image/png;base64,{base64}\"/>");
+                        var color = GetFillColorFromBitmap(bitmap);
+                        var polygons = TraceFillBitmapToPolygons(bitmap, color);
+                        if (polygons.Count == 0) continue;
+
+                        string fillColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
+
+                        var pathBuilder = new StringBuilder();
+                        foreach (var polygon in polygons)
+                        {
+                            var simplified = SimplifyPolygon(polygon, 1.0);
+                            if (simplified.Count < 3) continue;
+                            pathBuilder.Append($"M {simplified[0].X * coordScaleX + left:F2} {simplified[0].Y * coordScaleY + top:F2}");
+                            for (int i = 1; i < simplified.Count; i++)
+                            {
+                                pathBuilder.Append($" L {simplified[i].X * coordScaleX + left:F2} {simplified[i].Y * coordScaleY + top:F2}");
+                            }
+                            pathBuilder.Append(" Z");
+                        }
+
+                        if (pathBuilder.Length > 0)
+                        {
+                            sb.AppendLine($"  <path d=\"{pathBuilder}\" fill=\"{fillColor}\" fill-rule=\"evenodd\" stroke=\"none\" data-sw-fill=\"1\"/>");
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -3961,21 +4276,25 @@ namespace ShowWrite
                 var points = stroke.StylusPoints;
                 if (points == null || points.Count < 2) continue;
 
-                // 使用中心线点构建路径数据（而非轮廓几何，避免粗笔迹被误识别为闭合形状）
+                // 使用中心线点构建路径数据（缩放到照片像素坐标空间）
                 var pathBuilder = new StringBuilder();
-                pathBuilder.Append($"M {points[0].X:F2} {points[0].Y:F2}");
+                pathBuilder.Append($"M {points[0].X * coordScaleX:F2} {points[0].Y * coordScaleY:F2}");
                 for (int i = 1; i < points.Count; i++)
                 {
-                    pathBuilder.Append($" L {points[i].X:F2} {points[i].Y:F2}");
+                    pathBuilder.Append($" L {points[i].X * coordScaleX:F2} {points[i].Y * coordScaleY:F2}");
                 }
 
                 var color = attrs.Color;
                 string strokeColor = $"#{color.R:X2}{color.G:X2}{color.B:X2}";
                 double opacity = attrs.IsHighlighter ? 0.5 : 1.0;
                 double strokeWidth = Math.Max(attrs.Width, attrs.Height);
-                // 防御 NaN/0/负值，确保导出宽度有效
                 if (double.IsNaN(strokeWidth) || double.IsInfinity(strokeWidth) || strokeWidth <= 0.01)
                     strokeWidth = 2.0;
+                // 线宽按面积守恒缩放（与 ScaleStrokes 导入侧一致）
+                double widthScale = Math.Sqrt(coordScaleX * coordScaleY);
+                if (double.IsNaN(widthScale) || double.IsInfinity(widthScale) || widthScale <= 0)
+                    widthScale = 1.0;
+                strokeWidth *= widthScale;
 
                 sb.AppendLine($"  <path d=\"{pathBuilder}\" fill=\"none\" stroke=\"{strokeColor}\" stroke-opacity=\"{opacity:F2}\" stroke-width=\"{strokeWidth:F2}\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>");
             }
@@ -3983,6 +4302,306 @@ namespace ShowWrite
             sb.AppendLine("</svg>");
 
             File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
+        }
+
+        /// <summary>
+        /// 从 PathFigure 提取折线点（支持 LineSegment/PolyLineSegment，其他段类型取终点）
+        /// </summary>
+        private static List<WinPoint> ExtractFigurePoints(System.Windows.Media.PathFigure fig)
+        {
+            var pts = new List<WinPoint>();
+            if (fig == null) return pts;
+            pts.Add(fig.StartPoint);
+            foreach (var seg in fig.Segments)
+            {
+                if (seg is System.Windows.Media.LineSegment ls)
+                {
+                    pts.Add(ls.Point);
+                }
+                else if (seg is System.Windows.Media.PolyLineSegment pls)
+                {
+                    foreach (var p in pls.Points) pts.Add(p);
+                }
+                else
+                {
+                    // 其他段类型（Bezier/Arc 等）取终点
+                    var tp = seg.GetType().GetProperty("Point");
+                    if (tp != null && tp.GetValue(seg) is WinPoint ep)
+                        pts.Add(ep);
+                }
+            }
+            return pts;
+        }
+
+        /// <summary>
+        /// 将油漆桶填充位图追踪为矢量多边形（按顺时针绕向的闭合边界）
+        /// </summary>
+        /// <param name="bitmap">填充位图</param>
+        /// <param name="targetColor">若提供，只追踪匹配此颜色的像素（排除笔画像素）</param>
+        private static List<List<WinPoint>> TraceFillBitmapToPolygons(BitmapSource bitmap, System.Windows.Media.Color? targetColor = null)
+        {
+            var polygons = new List<List<WinPoint>>();
+            if (bitmap == null) return polygons;
+
+            int w = bitmap.PixelWidth;
+            int h = bitmap.PixelHeight;
+            if (w <= 0 || h <= 0) return polygons;
+
+            int stride = w * 4;
+            var pixels = new byte[stride * h];
+            bitmap.CopyPixels(pixels, stride, 0);
+
+            // 若提供了目标色，只匹配该色（容差±2，应对 Pbgra32 预乘误差）；否则匹配所有不透明像素
+            byte? tB = targetColor?.B, tG = targetColor?.G, tR = targetColor?.R;
+
+            bool IsFilled(int x, int y)
+            {
+                if (x < 0 || x >= w || y < 0 || y >= h) return false;
+                int idx = (y * w + x) * 4;
+                if (pixels[idx + 3] <= 128) return false;
+                if (tB.HasValue)
+                {
+                    return Math.Abs(pixels[idx] - tB.Value) <= 2 &&
+                           Math.Abs(pixels[idx + 1] - tG!.Value) <= 2 &&
+                           Math.Abs(pixels[idx + 2] - tR!.Value) <= 2;
+                }
+                return true;
+            }
+
+            // 构建有向边界边（顺时针绕向，使填充区在右侧）
+            var edgeMap = new Dictionary<(int, int), List<(int, int)>>();
+            void AddEdge(int sx, int sy, int ex, int ey)
+            {
+                var key = (sx, sy);
+                if (!edgeMap.TryGetValue(key, out var list))
+                {
+                    list = new List<(int, int)>();
+                    edgeMap[key] = list;
+                }
+                list.Add((ex, ey));
+            }
+
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    if (!IsFilled(x, y)) continue;
+                    if (!IsFilled(x, y - 1)) AddEdge(x, y, x + 1, y);           // 上边
+                    if (!IsFilled(x + 1, y)) AddEdge(x + 1, y, x + 1, y + 1);   // 右边
+                    if (!IsFilled(x, y + 1)) AddEdge(x + 1, y + 1, x, y + 1);   // 下边
+                    if (!IsFilled(x - 1, y)) AddEdge(x, y + 1, x, y);           // 左边
+                }
+            }
+
+            // 将边链接为闭合多边形
+            while (edgeMap.Count > 0)
+            {
+                var firstStart = edgeMap.Keys.First();
+                var ends = edgeMap[firstStart];
+                var firstEnd = ends[0];
+                ends.RemoveAt(0);
+                if (ends.Count == 0) edgeMap.Remove(firstStart);
+
+                var polygon = new List<WinPoint> { new WinPoint(firstStart.Item1, firstStart.Item2) };
+                var current = firstEnd;
+
+                while (current != firstStart)
+                {
+                    polygon.Add(new WinPoint(current.Item1, current.Item2));
+                    if (!edgeMap.TryGetValue(current, out var candidates) || candidates.Count == 0)
+                        break;
+                    var next = candidates[0];
+                    candidates.RemoveAt(0);
+                    if (candidates.Count == 0) edgeMap.Remove(current);
+                    current = next;
+                }
+
+                if (polygon.Count >= 3)
+                    polygons.Add(polygon);
+            }
+
+            return polygons;
+        }
+
+        /// <summary>
+        /// Douglas-Peucker 多边形抽稀（闭合多边形按开放折线处理，首尾为锚点）
+        /// </summary>
+        private static List<WinPoint> SimplifyPolygon(List<WinPoint> points, double tolerance)
+        {
+            if (points == null || points.Count < 3) return points;
+
+            int n = points.Count;
+            var keep = new bool[n];
+            keep[0] = keep[n - 1] = true;
+
+            void SimplifyRange(int s, int e)
+            {
+                if (e <= s + 1) return;
+                double maxDist = 0;
+                int maxIdx = -1;
+                var p1 = points[s];
+                var p2 = points[e];
+                for (int i = s + 1; i < e; i++)
+                {
+                    var p = points[i];
+                    double dx = p2.X - p1.X;
+                    double dy = p2.Y - p1.Y;
+                    double len2 = dx * dx + dy * dy;
+                    double dist;
+                    if (len2 < 1e-12)
+                    {
+                        dist = Math.Sqrt((p.X - p1.X) * (p.X - p1.X) + (p.Y - p1.Y) * (p.Y - p1.Y));
+                    }
+                    else
+                    {
+                        dist = Math.Abs(((p.X - p1.X) * dy - (p.Y - p1.Y) * dx)) / Math.Sqrt(len2);
+                    }
+                    if (dist > maxDist)
+                    {
+                        maxDist = dist;
+                        maxIdx = i;
+                    }
+                }
+                if (maxIdx >= 0 && maxDist > tolerance)
+                {
+                    keep[maxIdx] = true;
+                    SimplifyRange(s, maxIdx);
+                    SimplifyRange(maxIdx, e);
+                }
+            }
+
+            SimplifyRange(0, n - 1);
+
+            var result = new List<WinPoint>();
+            for (int i = 0; i < n; i++)
+            {
+                if (keep[i]) result.Add(points[i]);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 从填充位图中采样填充颜色（出现最多的不透明颜色，即填充主色而非笔画色）
+        /// </summary>
+        private static System.Windows.Media.Color GetFillColorFromBitmap(BitmapSource bitmap)
+        {
+            try
+            {
+                if (bitmap == null) return Colors.Black;
+                int w = bitmap.PixelWidth;
+                int h = bitmap.PixelHeight;
+                int stride = w * 4;
+                var pixels = new byte[stride * h];
+                bitmap.CopyPixels(pixels, stride, 0);
+
+                // 统计每种不透明颜色的出现次数，取最多的（填充区域通常远大于笔画）
+                var counts = new Dictionary<(byte, byte, byte), int>();
+                for (int i = 0; i < pixels.Length; i += 4)
+                {
+                    byte a = pixels[i + 3];
+                    if (a <= 128) continue;
+                    byte b = pixels[i];
+                    byte g = pixels[i + 1];
+                    byte r = pixels[i + 2];
+                    // 反预乘
+                    if (a > 0 && a < 255)
+                    {
+                        b = (byte)Math.Min(255, b * 255 / a);
+                        g = (byte)Math.Min(255, g * 255 / a);
+                        r = (byte)Math.Min(255, r * 255 / a);
+                    }
+                    var key = (b, g, r);
+                    counts.TryGetValue(key, out int c);
+                    counts[key] = c + 1;
+                }
+
+                if (counts.Count > 0)
+                {
+                    var dominant = counts.OrderByDescending(kv => kv.Value).First().Key;
+                    return System.Windows.Media.Color.FromRgb(dominant.Item3, dominant.Item2, dominant.Item1);
+                }
+            }
+            catch { }
+            return Colors.Black;
+        }
+
+        /// <summary>
+        /// 将 SVG 填充路径（M/L/Z 多边形）光栅化为位图，用于导入时还原油漆桶填充
+        /// </summary>
+        private static BitmapSource RasterizeFillPath(string pathData, System.Windows.Media.Color color, int width, int height)
+        {
+            try
+            {
+                if (width <= 0) width = 1920;
+                if (height <= 0) height = 1080;
+
+                // 用 StreamGeometry 构建多边形几何（支持多子路径 + evenodd 填充规则）
+                var geometry = new StreamGeometry();
+                geometry.FillRule = FillRule.EvenOdd;
+                using (var ctx = geometry.Open())
+                {
+                    var tokens = System.Text.RegularExpressions.Regex.Matches(pathData, @"[MLZmlz]|[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?")
+                        .Cast<System.Text.RegularExpressions.Match>()
+                        .Select(m => m.Value)
+                        .ToList();
+
+                    var invariant = System.Globalization.CultureInfo.InvariantCulture;
+                    double Num(int idx) => idx < tokens.Count && double.TryParse(tokens[idx], System.Globalization.NumberStyles.Float, invariant, out double v) ? v : 0;
+
+                    double curX = 0, curY = 0;
+                    double startX = 0, startY = 0;
+                    char cmd = 'M';
+                    int i = 0;
+                    while (i < tokens.Count)
+                    {
+                        if (tokens[i].Length == 1 && char.IsLetter(tokens[i][0]))
+                        {
+                            cmd = tokens[i][0];
+                            i++;
+                        }
+                        char c = char.ToUpper(cmd);
+                        bool rel = char.IsLower(cmd);
+                        switch (c)
+                        {
+                            case 'M':
+                                curX = Num(i); curY = Num(i + 1); i += 2;
+                                if (rel) { curX += startX; curY += startY; }
+                                startX = curX; startY = curY;
+                                // BeginFigure 自动结束上一个 figure；isFilled=true, isClosed=true（闭合多边形）
+                                ctx.BeginFigure(new WinPoint(curX, curY), true, true);
+                                cmd = char.IsLower(cmd) ? 'l' : 'L';
+                                break;
+                            case 'L':
+                                curX = Num(i); curY = Num(i + 1); i += 2;
+                                if (rel) { curX += startX; curY += startY; }
+                                ctx.LineTo(new WinPoint(curX, curY), true, true);
+                                startX = curX; startY = curY;
+                                break;
+                            case 'Z':
+                                // figure 已通过 BeginFigure(isClosed=true) 标记为闭合，无需额外操作
+                                cmd = 'M';
+                                break;
+                        }
+                    }
+                }
+                geometry.Freeze();
+
+                var dv = new DrawingVisual();
+                using (var dc = dv.RenderOpen())
+                {
+                    dc.DrawGeometry(new SolidColorBrush(color), null, geometry);
+                }
+
+                var rtb = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+                rtb.Render(dv);
+                rtb.Freeze();
+                return rtb;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("MainWindow", $"光栅化填充路径失败: {ex.Message}", ex);
+                return null;
+            }
         }
 
         /// <summary>

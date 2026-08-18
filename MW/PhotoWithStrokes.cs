@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
@@ -46,6 +47,31 @@ namespace ShowWrite
         /// 照片唯一标识（UUID），用于设备间同步时标号
         /// </summary>
         public string PhotoId { get; set; }
+
+        /// <summary>
+        /// 笔迹创建时 InkCanvas 的实际宽度（DIP）。
+        /// 0 表示旧数据，加载时不做缩放，保持向后兼容。
+        /// </summary>
+        public double OriginInkWidth { get; set; }
+
+        /// <summary>
+        /// 笔迹创建时 InkCanvas 的实际高度（DIP）。
+        /// 0 表示旧数据，加载时不做缩放，保持向后兼容。
+        /// </summary>
+        public double OriginInkHeight { get; set; }
+
+        /// <summary>
+        /// 关联的矢量填充路径快照（在 InkCanvas DIP 坐标空间，与 Strokes 同一坐标系）。
+        /// 在 AddPhoto / BackToLive / ImportSvgToCurrentPhoto 等保存点填充；
+        /// 在 SwitchToPhotoStrokes 加载时按 origin→current 尺寸比例缩放还原。
+        /// null 表示旧数据，无填充需要还原。
+        /// </summary>
+        public List<DrawingManager.FillPathRecord> FillPaths { get; set; }
+
+        /// <summary>
+        /// 关联的位图填充快照（兼容旧位图填充路径），与 Strokes 同一坐标系。
+        /// </summary>
+        public List<DrawingManager.FillImageRecord> FillImages { get; set; }
 
         private PhotoSource _source = PhotoSource.Local;
         /// <summary>
