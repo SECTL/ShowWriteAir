@@ -2,28 +2,10 @@
   <img width="16%" align="center" src="SW新圆角logo_256x256.ico" alt="logo">
 </p>
 
-# ShowWriteAir视频展台 2.1
+# ShowWriteAir
 ## 下载
-[Github Releases](https://github.com/wwcrdrvf6u/ShowWriteAir/releases/)
+[Github Releases](https://github.com/SECTL/ShowWriteAir/releases/)
 # 关于Show Write
-## 我们的设计理念
-**用户能改的，我们绝对不改**（指 让用户自己改源码）
-## 版本号命名
-为兼容希沃视频展台的原生启动器（**sweclauncher**），以便支持从侧边栏或中控菜单直接启动 **Show Write**，我们将应用的版本号格式调整为与希沃视频展台一致的风格。
-**示例：**
-```
-EasiCamera_2.1.1.8888
-```
-**结构说明：**
-
-| 部分   | 示例值          | 含义            |
-| ---- | ------------ | ------------- |
-| 前缀   | `EasiCamera` | 希沃视频展台的标识缩写   |
-| 分隔符  | `_`          | 固定分隔符         |
-| 主版本号 | `2.1.1`      | 应用自身的版本号      |
-| 尾缀   | `.8888`      | 区分希沃官方版本的附加标识 |
-
-保持与希沃原生版本号的兼容，又方便区分自研版本与官方版本。
 
 ## 此软件的运行库
 ### **.NET / WPF 基础库**
