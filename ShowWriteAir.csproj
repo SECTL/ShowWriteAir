@@ -8,7 +8,7 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Title>ShowWriteAir视频展台</Title>
 		<Version>2.2.0</Version>
-		<ApplicationIcon>icon-d1tools.com.ico</ApplicationIcon>
+		<ApplicationIcon>SW新圆角logo_256x256.ico</ApplicationIcon>
 		<PackageProjectUrl>https://github.com/SECTL/ShowWriteAir/</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/wwcrdrvf6u/ShowWriteAir/</RepositoryUrl>
 		<Authors>wwcrdrvf6u</Authors>
@@ -17,7 +17,7 @@
 		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
-	  <Content Include="icon-d1tools.com.ico" />
+	  <Content Include="SW新圆角logo_256x256.ico" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="AForge.Imaging" Version="2.2.5" />
