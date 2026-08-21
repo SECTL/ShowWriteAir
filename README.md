@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="16%" align="center" src="logo-SW.png" alt="logo">
+  <img width="16%" align="center" src="SW新圆角logo_256x256.ico" alt="logo">
 </p>
 
 # ShowWriteAir视频展台 2.1
