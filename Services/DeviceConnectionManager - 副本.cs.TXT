@@ -14,7 +14,7 @@ using System.Management;
 using Newtonsoft.Json;
 
 
-namespace ShowWrite.Services
+namespace ShowWriteAir.Services
 {
     /// <summary>
     /// 已连接设备信息项

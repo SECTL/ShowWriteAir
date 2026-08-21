@@ -1,4 +1,4 @@
-using ShowWrite.Services;
+using ShowWriteAir.Services;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -7,7 +7,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using System.Diagnostics;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// OOBE（开箱体验）窗口 - 初始配置向导

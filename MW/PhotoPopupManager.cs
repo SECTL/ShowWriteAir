@@ -1,4 +1,4 @@
-using ShowWrite.Models;
+using ShowWriteAir.Models;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -11,7 +11,7 @@ using Image = System.Windows.Controls.Image;
 using ListBox = System.Windows.Controls.ListBox;
 using Orientation = System.Windows.Controls.Orientation;
 
-namespace ShowWrite.Services
+namespace ShowWriteAir.Services
 {
     /// <summary>
     /// 照片悬浮窗管理器

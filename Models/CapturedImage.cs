@@ -1,7 +1,7 @@
-﻿using System.Windows.Ink;
+using System.Windows.Ink;
 using System.Windows.Media.Imaging;
 
-namespace ShowWrite.Models
+namespace ShowWriteAir.Models
 {
     public class CapturedImage
     {

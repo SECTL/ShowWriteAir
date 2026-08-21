@@ -1,9 +1,9 @@
-﻿using AForge.Imaging.Filters;
+using AForge.Imaging.Filters;
 using System.Windows.Media.Imaging;
 using ZXing;
 using ZXing.Common;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 视频帧处理类，负责各种图像处理操作

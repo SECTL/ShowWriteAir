@@ -6,7 +6,7 @@ using System.Windows.Ink;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 照片来源类型
@@ -34,7 +34,7 @@ namespace ShowWrite
     /// </summary>
     public class PhotoWithStrokes : INotifyPropertyChanged
     {
-        public ShowWrite.Models.CapturedImage CapturedImage { get; set; }
+        public ShowWriteAir.Models.CapturedImage CapturedImage { get; set; }
         public StrokeCollection Strokes { get; set; }
 
         public BitmapSource Image { get; set; }
@@ -111,7 +111,7 @@ namespace ShowWrite
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public PhotoWithStrokes(ShowWrite.Models.CapturedImage capturedImage)
+        public PhotoWithStrokes(ShowWriteAir.Models.CapturedImage capturedImage)
         {
             CapturedImage = capturedImage;
             Strokes = new StrokeCollection();

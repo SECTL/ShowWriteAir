@@ -1,8 +1,8 @@
-<Window x:Class="ShowWrite.PenSettingsWindow"
+<Window x:Class="ShowWriteAir.PenSettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:ShowWrite"
-        xmlns:services="clr-namespace:ShowWrite.Services"
+        xmlns:local="clr-namespace:ShowWriteAir"
+        xmlns:services="clr-namespace:ShowWriteAir.Services"
         Title="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[PenSettings]}" Height="421" Width="400"
         WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
     <Grid Margin="15">

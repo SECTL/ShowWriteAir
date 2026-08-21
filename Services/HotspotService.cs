@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ShowWrite.Services
+namespace ShowWriteAir.Services
 {
     public enum HotspotFailureReason
     {
@@ -35,7 +35,7 @@ namespace ShowWrite.Services
 
     public static class HotspotConfig
     {
-        public const string Ssid = "ShowWriteHotspot";
+        public const string Ssid = "ShowWriteAirHotspot";
         public const string Password = "12345678";
         public const string DefaultHotspotIP = "192.168.137.1";
         public const int ProcessTimeoutSeconds = 30;
@@ -158,7 +158,7 @@ namespace ShowWrite.Services
                 foreach (var adapter in adapters)
                 {
                     // 兼容两种后端的热点适配器
-                    if (adapter.Name.Contains("ShowWriteHotspot") ||
+                    if (adapter.Name.Contains("ShowWriteAirHotspot") ||
                         adapter.Description.Contains("Microsoft Hosted Network Virtual Adapter") ||
                         adapter.Description.Contains("Hosted Network") ||
                         adapter.Description.IndexOf("Microsoft Wi-Fi Direct Virtual Adapter", StringComparison.OrdinalIgnoreCase) >= 0 ||
@@ -220,7 +220,7 @@ namespace ShowWrite.Services
         /// 而是调用后轮询 TetheringOperationalState 判断是否成功启动。
         /// </summary>
         private const string StartTetheringScript = @"
-param([string]$Ssid = 'ShowWriteHotspot', [string]$Password = '12345678')
+param([string]$Ssid = 'ShowWriteAirHotspot', [string]$Password = '12345678')
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 Add-Type -AssemblyName System.Runtime.WindowsRuntime
 

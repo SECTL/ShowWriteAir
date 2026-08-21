@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 日志级别

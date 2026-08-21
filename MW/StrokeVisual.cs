@@ -3,7 +3,7 @@ using StylusPoint = System.Windows.Input.StylusPoint;
 using Stroke = System.Windows.Ink.Stroke;
 using DrawingAttributes = System.Windows.Ink.DrawingAttributes;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 手写笔预览视觉元素

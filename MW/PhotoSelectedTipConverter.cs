@@ -1,8 +1,8 @@
-﻿// PhotoSelectedTipConverter.cs
+// PhotoSelectedTipConverter.cs
 using System.Globalization;
 using System.Windows.Data;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 照片选中状态提示转换器

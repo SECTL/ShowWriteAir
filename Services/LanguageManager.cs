@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 
-namespace ShowWrite.Services
+namespace ShowWriteAir.Services
 {
     /// <summary>
     /// 语言类型
@@ -198,7 +198,7 @@ namespace ShowWrite.Services
             AddTranslation("StartupImageNote6", "3. 清空文本框将使用默认启动图", "3. 清空文本框將使用預設啟動圖", "三、若清空文匣，则用默启程图", "3. Clear text box to use default startup image", "༣. ཚིག་སྒྲོམ་སྟོང་པོར་གཏོང་ན་སྔོན་སྒྲིག་སྒོ་འབྱེད་པར་རིས་སྤྱོད་པ");
 
             // 关于
-            AddTranslation("ShowWriteVideoPresenter", "ShowWrite Air", "ShowWrite Air", "ShowWrite Air", "ShowWrite Air", "ShowWrite Air");
+            AddTranslation("ShowWriteAirVideoPresenter", "ShowWriteAir", "ShowWriteAir", "ShowWriteAir", "ShowWriteAir", "ShowWriteAir");
             AddTranslation("Version", "版本: ", "版本: ", "版本：", "Version: ", "པར་གཞི: ");
             AddTranslation("Copyright", "© 智教联盟", "© 智教聯盟", "© 智教盟", "© Smart Education Alliance", "© རིག་གནས་སློབ་གསོའི་མཐུན་ཚོགས");
             AddTranslation("BasedOnLibraries", "本软件基于AForge.NET和ZXing库开发", "本軟體基於AForge.NET和ZXing庫開發", "此器本于 AForge.NET 与 ZXing 库而作", "This software is developed based on AForge.NET and ZXing libraries", "མཉེན་ཆས་འདི་AForge.NETདང་ZXingགཞི་བཙུགས་ལ་བརྟེན་ནས་བཟོས་པ");
@@ -353,7 +353,7 @@ namespace ShowWrite.Services
             AddTranslation("Degrees", "°", "°", "度", "°", "°");
 
             // 启动窗口
-            AddTranslation("ShowWrite", "ShowWrite", "ShowWrite", "ShowWrite", "ShowWrite", "ShowWrite");
+            AddTranslation("ShowWriteAir", "ShowWriteAir", "ShowWriteAir", "ShowWriteAir", "ShowWriteAir", "ShowWriteAir");
             AddTranslation("VideoPresenter", "Air", "Air", "Air", "Air", "Air");
             AddTranslation("OpenSourceVideoPresenter", "开 源 视 频 展 台 行 业 跟 跑 者", "開 源 影 片 展 台 行 業 跟 跑 者", "开源影画展台行业从行者", "Open Source Video Presenter Industry Follower", "གསར་བཏོད་བརྙན་འཕྲིན་བཤམས་སྟེགས་ལས་རིགས་རྗེས་སྙེག");
             AddTranslation("SoftwareVersion", "软件版本", "軟體版本", "器版本", "Software Version", "མཉེན་ཆས་པར་གཞི");

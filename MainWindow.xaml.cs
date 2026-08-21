@@ -1,8 +1,8 @@
 using AForge.Imaging.Filters;
 using iNKORE.UI.WPF.Modern;
 using Newtonsoft.Json;
-using ShowWrite.Models;
-using ShowWrite.Services;
+using ShowWriteAir.Models;
+using ShowWriteAir.Services;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -34,7 +34,7 @@ using QRCoder;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     public partial class MainWindow : Window
     {
@@ -494,7 +494,7 @@ namespace ShowWrite
             try
             {
                 // 1. 设置窗口标题显示照片模式
-                this.Title = $"ShowWrite - 照片查看模式";
+                this.Title = $"ShowWriteAir - 照片查看模式";
 
                 // 2. 关闭可能的悬浮窗
                 if (PenSettingsPopup.IsOpen)
@@ -567,7 +567,7 @@ namespace ShowWrite
                     _drawingManager.SwitchToPhotoStrokes(_liveStrokes);
 
                     // 6. 更新UI状态
-                    this.Title = "ShowWrite";
+                    this.Title = "ShowWriteAir";
 
                     // 7. 显示拍照和扫描按钮
                     if (CaptureBtn != null)
@@ -3932,7 +3932,7 @@ namespace ShowWrite
                 using var client = new System.Net.Http.HttpClient();
                 client.Timeout = TimeSpan.FromSeconds(15);
                 // 模拟浏览器避免部分网站拒绝下载
-                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ShowWrite");
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ShowWriteAir");
                 client.DefaultRequestHeaders.Add("Referer", $"{uri.Scheme}://{uri.Host}/");
 
                 // 使用 GetAsync 以便检查响应头中的 Content-Type

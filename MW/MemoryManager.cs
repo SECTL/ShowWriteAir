@@ -1,6 +1,6 @@
 using System.Windows.Media.Imaging;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 内存管理类，负责资源释放和垃圾回收

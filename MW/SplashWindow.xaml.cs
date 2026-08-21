@@ -1,9 +1,9 @@
-using ShowWrite.Services;
+using ShowWriteAir.Services;
 using System.Windows;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     public partial class SplashWindow : Window
     {
@@ -33,7 +33,7 @@ namespace ShowWrite
         private void UpdateLanguage()
         {
             // 更新窗口标题
-            Title = _languageManager.GetTranslation("ShowWrite");
+            Title = _languageManager.GetTranslation("ShowWriteAir");
 
             // 强制刷新所有绑定
             this.Dispatcher.Invoke(() =>

@@ -1,8 +1,8 @@
-<Window x:Class="ShowWrite.AdjustVideoWindow"
+<Window x:Class="ShowWriteAir.AdjustVideoWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="clr-namespace:ShowWrite"
-        xmlns:services="clr-namespace:ShowWrite.Services"
+        xmlns:local="clr-namespace:ShowWriteAir"
+        xmlns:services="clr-namespace:ShowWriteAir.Services"
         Title="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[AdjustVideo]}" Height="409" Width="364"
         WindowStartupLocation="CenterOwner">
     <StackPanel Margin="15,0,15,0" VerticalAlignment="Center" Height="332">

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
-namespace ShowWrite.Services
+namespace ShowWriteAir.Services
 {
     /// <summary>
     /// 文件关联服务：将支持的图片扩展名注册到本程序，使图片可通过本程序直接打开。
@@ -11,7 +11,7 @@ namespace ShowWrite.Services
     /// </summary>
     public static class FileAssociationService
     {
-        private const string ProgId = "ShowWrite.Photo";
+        private const string ProgId = "ShowWriteAir.Photo";
         private static readonly string[] SupportedExtensions = { ".png", ".jpg", ".jpeg", ".bmp", ".gif" };
 
         [DllImport("shell32.dll", CharSet = CharSet.Auto, SetLastError = true)]
@@ -46,8 +46,8 @@ namespace ShowWrite.Services
                 // 1. 注册 ProgID
                 using (var progKey = Registry.CurrentUser.CreateSubKey($@"Software\Classes\{ProgId}"))
                 {
-                    progKey.SetValue(null, "ShowWrite 图片");
-                    progKey.SetValue("FriendlyTypeName", "ShowWrite 图片");
+                    progKey.SetValue(null, "ShowWriteAir 图片");
+                    progKey.SetValue("FriendlyTypeName", "ShowWriteAir 图片");
 
                     using (var iconKey = progKey.CreateSubKey("DefaultIcon"))
                     {

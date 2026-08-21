@@ -1,8 +1,8 @@
-using ShowWrite.Services;
+using ShowWriteAir.Services;
 using System.Threading;
 using System.Windows;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     public partial class App : System.Windows.Application
     {

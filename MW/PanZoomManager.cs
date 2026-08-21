@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 处理平移和缩放功能的管理器

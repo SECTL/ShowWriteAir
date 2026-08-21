@@ -2,9 +2,9 @@
   <img width="16%" align="center" src="logo-SW.png" alt="logo">
 </p>
 
-# ShowWrite视频展台 2.1
+# ShowWriteAir视频展台 2.1
 ## 下载
-[Github Releases](https://github.com/wwcrdrvf6u/ShowWrite/releases/)
+[Github Releases](https://github.com/wwcrdrvf6u/ShowWriteAir/releases/)
 # 关于Show Write
 ## 我们的设计理念
 **用户能改的，我们绝对不改**（指 让用户自己改源码）

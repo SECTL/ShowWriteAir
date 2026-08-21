@@ -1,7 +1,7 @@
-﻿using AForge.Video;
+using AForge.Video;
 using AForge.Video.DirectShow;
 
-namespace ShowWrite.Services
+namespace ShowWriteAir.Services
 {
     public sealed class VideoService : IDisposable
     {

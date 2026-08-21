@@ -1,10 +1,10 @@
-using ShowWrite.Services;
+using ShowWriteAir.Services;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using WinForms = System.Windows.Forms;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     public partial class PenSettingsWindow : Window
     {

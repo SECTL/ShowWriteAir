@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
 		<OutputType>WinExe</OutputType>
 		<TargetFramework>net8.0-windows</TargetFramework>
@@ -6,14 +6,14 @@
 		<UseWindowsForms>true</UseWindowsForms>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
-		<Title>ShowWrite视频展台</Title>
-		<Version>2.1.5</Version>
+		<Title>ShowWriteAir视频展台</Title>
+		<Version>2.2.0</Version>
 		<ApplicationIcon>icon-d1tools.com.ico</ApplicationIcon>
-		<PackageProjectUrl>https://github.com/wwcrdrvf6u/ShowWrite/</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/wwcrdrvf6u/ShowWrite/</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/SECTL/ShowWriteAir/</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/wwcrdrvf6u/ShowWriteAir/</RepositoryUrl>
 		<Authors>wwcrdrvf6u</Authors>
 		<SelfContained>false</SelfContained>
-		<Platforms>AnyCPU;x64</Platforms>
+		<Platforms>AnyCPU;x64;x86</Platforms>
 		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
 	<ItemGroup>
@@ -27,12 +27,15 @@
 		<PackageReference Include="iNKORE.UI.WPF.Modern" Version="0.10.2.1" />
 		<PackageReference Include="Magick.NET-Q8-AnyCPU" Version="14.10.2" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="QRCoder" Version="1.7.0" />
+		<PackageReference Include="QRCoder" Version="1.4.3" />
+		<PackageReference Include="System.Management" Version="8.0.0" />
 		<PackageReference Include="ZXing.Net" Version="0.16.10" />
 	</ItemGroup>
 	<ItemGroup>
 		<Resource Include="icons\*.png" />
-	  
+	</ItemGroup>
+	<ItemGroup>
+		<Resource Include="images\*.png" />
 	</ItemGroup>
 	<ItemGroup>
 	  <None Update="SWECL.png">

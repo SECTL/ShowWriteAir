@@ -1,9 +1,9 @@
-<Window x:Class="ShowWrite.SettingsWindow"
+<Window x:Class="ShowWriteAir.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.inkore.net/lib/ui/wpf/modern"
-        xmlns:local="clr-namespace:ShowWrite"
-        xmlns:services="clr-namespace:ShowWrite.Services"
+        xmlns:local="clr-namespace:ShowWriteAir"
+        xmlns:services="clr-namespace:ShowWriteAir.Services"
         ui:WindowHelper.UseModernWindowStyle="True"
         ui:WindowHelper.SystemBackdropType="Mica"
         Title="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Settings]}" Height="498" Width="678"
@@ -280,7 +280,7 @@
             <Grid x:Name="AboutPanel" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="20,10,20,10">
-                        <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ShowWriteVideoPresenter]}" FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[ShowWriteAirVideoPresenter]}" FontSize="20" FontWeight="Bold"/>
                         <TextBlock Margin="0,10">
                             <Run Text="{Binding Source={x:Static services:LanguageManager.Instance}, Path=Translations[Version]}"/>
                             <Run x:Name="VersionText"/>

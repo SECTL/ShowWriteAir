@@ -1,8 +1,8 @@
-using ShowWrite.Services;
+using ShowWriteAir.Services;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     public partial class AdjustVideoWindow : Window
     {

@@ -1,9 +1,9 @@
-﻿using AForge;
+using AForge;
 using AForge.Imaging.Filters;
-using ShowWrite.Models;
-using ShowWrite.Services;
+using ShowWriteAir.Models;
+using ShowWriteAir.Services;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 摄像头管理类

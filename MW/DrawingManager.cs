@@ -1,4 +1,4 @@
-using ShowWrite.Models;
+using ShowWriteAir.Models;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
@@ -18,7 +18,7 @@ using WinPoint = System.Windows.Point;
 using WinImage = System.Windows.Controls.Image;
 using DrawingImage = System.Windows.Media.DrawingImage;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     public class DrawingManager : IDisposable
     {

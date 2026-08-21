@@ -1,10 +1,10 @@
-using ShowWrite.Models;
-using ShowWrite.Services;
+using ShowWriteAir.Models;
+using ShowWriteAir.Services;
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     public partial class SettingsWindow : Window
     {
@@ -232,7 +232,7 @@ namespace ShowWrite
                 // 打开GitHub发布页
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                 {
-                    FileName = "https://github.com/wwcrdrvf6u/ShowWrite/",
+                    FileName = "https://github.com/wwcrdrvf6u/ShowWriteAir/",
                     UseShellExecute = true // 必须设置为true才能打开URL
                 });
             }

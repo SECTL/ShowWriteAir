@@ -1,7 +1,7 @@
-﻿using ShowWrite.Models;
+using ShowWriteAir.Models;
 using System.Drawing.Imaging;
 
-namespace ShowWrite.Services
+namespace ShowWriteAir.Services
 {
     public static class ImageAdjust
     {

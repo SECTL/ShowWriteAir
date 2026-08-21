@@ -2,7 +2,7 @@ using System.Windows;
 using System.Windows.Ink;
 using System.Windows.Media;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 视觉画布，用于渲染手写笔预览

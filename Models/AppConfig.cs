@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace ShowWrite.Models
+namespace ShowWriteAir.Models
 {
     public class AppConfig
     {

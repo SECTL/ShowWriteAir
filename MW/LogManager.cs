@@ -2,7 +2,7 @@
 // [file content begin]
 using System.IO;
 
-namespace ShowWrite
+namespace ShowWriteAir
 {
     /// <summary>
     /// 日志管理器，提供日志相关的管理功能

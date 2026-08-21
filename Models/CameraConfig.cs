@@ -1,4 +1,4 @@
-﻿namespace ShowWrite.Models
+namespace ShowWriteAir.Models
 {
     public class CameraConfig
     {
